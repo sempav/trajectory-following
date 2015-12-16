@@ -30,6 +30,8 @@ TRAJECTORY_SEGMENT_COUNT = 10
 DISPLAYED_POINTS_COUNT = 0
 DISPLAYED_USED_POINTS_COUNT = 0
 
+DEFAULT_FOV = 0.25 * pi
+
 Instr = namedtuple('Instr', 'v, omega')
 TrajectoryPoint = namedtuple('TrajectoryPoint', 'time, pos')
 LeaderState = namedtuple('LeaderState', 'time, pos, theta')
@@ -54,7 +56,7 @@ class Follower(BehaviorBase):
                  leader, trajectory_delay=2.0,
                  orig_leader=None, orig_leader_delay=None,
                  noise_sigma=0.0, dump_file=None,
-                 visibility_fov=0.5 * pi, visibility_radius=None,
+                 visibility_fov=DEFAULT_FOV, visibility_radius=None,
                  id=None):
 
         """
@@ -137,36 +139,39 @@ class Follower(BehaviorBase):
         return (i is None) or (length(i - self.pos) > length(p - self.pos))
 
 
+    def store_leaders_state(self, engine, obstacles):
+        if self.visible_point(self.leader.real.pos, obstacles):
+            self.leader_is_visible = True
+
+            noisy_pos = self.leader.real.pos
+            noisy_pos += Vector(gauss(0.0, self.noise_sigma),
+                                gauss(0.0, self.noise_sigma))
+            self.leader_noisy_pos = noisy_pos
+            self.trajectory.append(TrajectoryPoint(engine.time, noisy_pos))
+            self.last_update_time = engine.time
+        else:
+            self.leader_is_visible = False
+
+        orig_leader_theta = atan2(self.orig_leader.real.dir.y,
+                                  self.orig_leader.real.dir.x)
+        self.orig_leader_states.append(LeaderState(time=engine.time,
+                                                   pos=self.orig_leader.real.pos,
+                                                   theta=orig_leader_theta))
+
+
     def calc_desired_velocity(self, bots, obstacles, targets, engine):
         # update trajectory
         if engine.time - self.last_update_time > self.update_interval:
-            if self.visible_point(self.leader.real.pos, obstacles):
-                self.leader_is_visible = True
+            self.store_leaders_state(engine, obstacles)
 
-                noisy_pos = self.leader.real.pos
-                noisy_pos += Vector(gauss(0.0, self.noise_sigma),
-                                    gauss(0.0, self.noise_sigma))
-                self.leader_noisy_pos = noisy_pos
-                self.trajectory.append(TrajectoryPoint(engine.time, noisy_pos))
-                self.last_update_time = engine.time
-            else:
-                self.leader_is_visible = False
-
-            orig_leader_theta = atan2(self.orig_leader.real.dir.y,
-                                      self.orig_leader.real.dir.x)
-            self.orig_leader_states.append(LeaderState(time=engine.time,
-                                                       pos=self.orig_leader.real.pos,
-                                                       theta=orig_leader_theta))
-
-        #arr = [self.trajectory[x] for x in xrange(SAMPLE_COUNT)]
         t = engine.time - self.trajectory_delay
         arr = get_interval(self.trajectory, t, SAMPLE_COUNT)
         self.traj_interval = arr
         if len(arr) == 0:
             return Instr(0.0, 0.0)
+        # reduce random movements at the start
         if self.leader_is_visible and length(self.pos - self.leader_noisy_pos) < MIN_DISTANCE_TO_LEADER:
             return Instr(0.0, 0.0)
-
 
         x_pos = np.array([el.pos.x for el in arr])
         y_pos = np.array([el.pos.y for el in arr])
@@ -175,32 +180,60 @@ class Follower(BehaviorBase):
         # calculate quadratic approximation of the reference trajectory
         x_poly = np.polyfit(times, x_pos, deg=2)
         y_poly = np.polyfit(times, y_pos, deg=2)
-        x_approx = np.poly1d(x_poly)
-        y_approx = np.poly1d(y_poly)
-        self.x_approx = x_approx
-        self.y_approx = y_approx
+        known_x_approx = np.poly1d(x_poly)
+        known_y_approx = np.poly1d(y_poly)
+        known_dx = np.poly1d([2 * x_poly[0], x_poly[1]])
+        known_dy = np.poly1d([2 * y_poly[0], y_poly[1]])
         self.t_st = times[0]
         self.t_fn = max(times[-1], t)
 
-        # t = engine.time - self.trajectory_delay
-
-        # pick time value from the middle of the sample
-        # convert from np.float64 to float to avoid implicit casts to ndarrays
-        #t = float(times[len(times) / 2])
-        self.target_point = Point(x_approx(t), y_approx(t))
-        # these two values are often used in the following formulas
-        x02t_x1 = 2 * x_poly[0] * t + x_poly[1]
-        y02t_y1 = 2 * y_poly[0] * t + y_poly[1]
-
-        # x_r, y_r and theta_r denote the reference robot's state
-        x_r = x_approx(t)
-        y_r = y_approx(t)
-        # remember that atan2 already adds/subtracts pi as needed!
-        theta_r = atan2(y02t_y1, x02t_x1)
+        # now adding a circle to the end of known trajectory
+        # k is signed curvature of the trajectry at t_fn
+        # k = omega_fun(times[-1])/v_fun(times[-1])
+        k = (known_dx(times[-1]) * 2 * y_poly[0] - known_dy(times[-1]) * 2 * x_poly[0]) / (known_dx(times[-1])**2 + known_dy(times[-1])**2)**1.5
+        if (k == 0.0 or isnan(k)):
+            if isnan(k):
+                print "k =", k
+            self.x_approx = known_x_approx
+            self.y_approx = known_y_approx
+            dx = known_dx
+            dy = known_dy
+            ddx = lambda time: 2 * x_poly[0]
+            ddy = lambda time: 2 * y_poly[0]
+        else:
+            radius = abs(1.0/k)
+            # trajectory direction at time t_fn
+            d = normalize(Vector(known_dx(times[-1]), known_dy(times[-1])))
+            r = Vector(-d.y, d.x) / k
+            center = Point(x_pos[-1], y_pos[-1]) + r
+            phase = atan2(-r.y, -r.x)
+            freq = known_dx(times[-1]) / r.y
+            self.x_approx = lambda time: known_x_approx(time) if time < times[-1] else \
+                                         center.x + radius * cos(freq * (time - times[-1]) + phase)
+            self.y_approx = lambda time: known_y_approx(time) if time < times[-1] else \
+                                         center.y + radius * sin(freq * (time - times[-1]) + phase)
+            dx = lambda time: known_dx(time) if time < times[-1] else \
+                              -radius * freq * sin(freq * (time - times[-1]) + phase)
+            dy = lambda time: known_dy(time) if time < times[-1] else \
+                              radius * freq * cos(freq * (time - times[-1]) + phase)
+            ddx = lambda time: 2 * x_poly[0] if time < times[-1] else \
+                              -radius * freq * freq * cos(freq * (time - times[-1]) + phase)
+            ddy = lambda time: 2 * y_poly[0] if time < times[-1] else \
+                              -radius * freq * freq * sin(freq * (time - times[-1]) + phase)
 
         # calculate the feed-forward velocities
-        v_ff = sqrt(x02t_x1**2 + y02t_y1**2)
-        omega_ff = (x02t_x1 * 2 * y_poly[0] - y02t_y1 * 2 * x_poly[0]) / (x02t_x1**2 + y02t_y1**2)
+        v_fun = lambda time: sqrt(dx(time)**2 + dy(time)**2)
+        #omega_fun = lambda time: (dx(time) * 2 * y_poly[0] - dy(time) * 2 * x_poly[0]) / (dx(time)**2 + dy(time)**2)
+        omega_fun = lambda time: (dx(time) * ddy(time) - dy(time) * ddx(time)) / (dx(time)**2 + dy(time)**2)
+        v_ff = v_fun(t)
+        omega_ff = omega_fun(t)
+
+        # x_r, y_r and theta_r denote the reference robot's state
+        x_r = self.x_approx(t)
+        y_r = self.y_approx(t)
+        self.target_point = Point(x_r, y_r)
+        theta_r = atan2(dy(t), dx(t))
+
 
         if isnan(v_ff):
             v_ff = 0.0
