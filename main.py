@@ -20,7 +20,7 @@ from mock_trajectories import *
 FRAMERATE = 60
 FRAMES_PER_BOT_UPDATE = 1
 
-NUM_FOLLOWERS = 10
+NUM_FOLLOWERS = 20
 
 
 def create_dump_file():
@@ -135,7 +135,8 @@ def main(args):
         #field.width = field.right - field.left
         #field.height = field.top - field.bottom
 
-        delta_time = 0.001 * clock.tick(FRAMERATE)
+        real_delta_time = 0.001 * clock.tick(FRAMERATE)
+        delta_time = 1.0 / FRAMERATE
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 finished = True
@@ -193,7 +194,7 @@ def main(args):
                      obstacles = eng.obstacles,
                      targets = eng.targets)
 
-        text = "Time: " + str(eng.time) + "s"
+        text = ("Time: %.3f" % eng.time) + ("s, FPS: %.2f" % (1.0 / real_delta_time))
         ren = font.render(text, 0, (255, 255, 255))
         text_size = font.size(text)
         graph.screen.blit(ren, (30, graph.size[1] - text_size[1]))
