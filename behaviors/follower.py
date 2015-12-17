@@ -18,19 +18,21 @@ from engine.shapes import Ray, first_intersection
 from ring_buffer import RingBuffer, get_interval
 
 from collections import namedtuple
-from math import sin, cos, pi, atan2, sqrt, copysign, isnan
+from math import sin, cos, pi, atan2, sqrt, copysign, isnan, log
 from random import gauss
 import numpy as np
 
 TRAJECTORY_SIZE = 100
 SAMPLE_COUNT = 40
 MIN_DISTANCE_TO_LEADER = 0.1
+DISABLE_CIRCLES = False
+CIRCLE_SHRINKING_COEFF = log(0.8)
 
 TRAJECTORY_SEGMENT_COUNT = 10
-DISPLAYED_POINTS_COUNT = 0
+DISPLAYED_POINTS_COUNT = 10
 DISPLAYED_USED_POINTS_COUNT = 0
 
-DEFAULT_FOV = 0.25 * pi
+DEFAULT_FOV = 0.5 * pi
 
 Instr = namedtuple('Instr', 'v, omega')
 TrajectoryPoint = namedtuple('TrajectoryPoint', 'time, pos')
@@ -191,9 +193,9 @@ class Follower(BehaviorBase):
         # k is signed curvature of the trajectry at t_fn
         # k = omega_fun(times[-1])/v_fun(times[-1])
         k = (known_dx(times[-1]) * 2 * y_poly[0] - known_dy(times[-1]) * 2 * x_poly[0]) / (known_dx(times[-1])**2 + known_dy(times[-1])**2)**1.5
-        if (k == 0.0 or isnan(k)):
-            if isnan(k):
-                print "k =", k
+        if (k == 0.0 or isnan(k) or DISABLE_CIRCLES):
+            #if isnan(k):
+            #    print "k =", k
             self.x_approx = known_x_approx
             self.y_approx = known_y_approx
             dx = known_dx

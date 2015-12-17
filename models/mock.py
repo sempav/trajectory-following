@@ -44,6 +44,8 @@ class MockModel(object):
         else: # bot is user-controlled
             if abs(self.vel) > self.max_vel:
                 self.vel = copysign(self.max_vel, self.vel)
+            #if self.vel < 0:
+            #    self.vel = 0
             self.pos += self.dir * self.vel * delta_time
 
 

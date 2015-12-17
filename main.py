@@ -20,7 +20,7 @@ from mock_trajectories import *
 FRAMERATE = 60
 FRAMES_PER_BOT_UPDATE = 1
 
-NUM_FOLLOWERS = 20
+NUM_FOLLOWERS = 1
 
 
 def create_dump_file():
@@ -50,8 +50,8 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
         eng.bots.append(Bot(models.MockModel(pos=start_pos, dir=start_dir, vel=0.0, pos_fun=pos_fun),
                             behavior=behaviors.Leader()))
     else:
-        #pos_fun=make_figure8()
-        pos_fun = make_lissajous(35.0, 4, 3, 1, 4)
+        pos_fun=make_lissajous(15.0, 4, 0.5, 1, 3)
+        #pos_fun = make_lissajous(35.0, 4, 3, 1, 4)
         eng.bots.append(Bot(models.MockModel(pos=(0.0, 0.0), dir=(1.0, 0.0), vel=0.0, pos_fun=pos_fun),
                             behavior=behaviors.Leader()))
         start_pos = eng.bots[0].real.pos_fun(0)
