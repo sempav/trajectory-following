@@ -27,7 +27,7 @@ TRAJECTORY_SIZE = 100
 SAMPLE_COUNT = 40
 MIN_DISTANCE_TO_LEADER = 2 * BOT_RADIUS
 DISABLE_CIRCLES = False
-CIRCLE_SHRINKING_COEFF = log(0.8)
+MIN_CIRCLE_CURVATURE = 10.0
 
 TRAJECTORY_SEGMENT_COUNT = 10
 DISPLAYED_POINTS_COUNT = 0
@@ -194,9 +194,9 @@ class Follower(BehaviorBase):
         # k is signed curvature of the trajectry at t_fn
         # k = omega_fun(times[-1])/v_fun(times[-1])
         k = (known_dx(times[-1]) * 2 * y_poly[0] - known_dy(times[-1]) * 2 * x_poly[0]) / (known_dx(times[-1])**2 + known_dy(times[-1])**2)**1.5
+        if abs(k) < MIN_CIRCLE_CURVATURE:
+            k = copysign(MIN_CIRCLE_CURVATURE, k)
         if (k == 0.0 or isnan(k) or DISABLE_CIRCLES):
-            #if isnan(k):
-            #    print "k =", k
             self.x_approx = known_x_approx
             self.y_approx = known_y_approx
             dx = known_dx
