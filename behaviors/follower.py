@@ -38,6 +38,8 @@ DEFAULT_FOV = 0.25 * pi
 Instr = namedtuple('Instr', 'v, omega')
 TrajectoryPoint = namedtuple('TrajectoryPoint', 'time, pos')
 LeaderState = namedtuple('LeaderState', 'time, pos, theta')
+# used to represent bot's state vector: x, y, theta
+State = namedtuple('State', 'x, y, theta')
 
 
 def lerp(a, b, coeff):
@@ -75,7 +77,6 @@ class Follower(BehaviorBase):
         assert(isinstance(orig_leader, Bot))
 
         self.radius = BOT_RADIUS
-        self.state = 1
         self.leader = leader
         self.orig_leader = orig_leader
         self.trajectory_delay = trajectory_delay
