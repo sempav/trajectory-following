@@ -171,9 +171,19 @@ def main(args):
                           interactive=args.interactive, dump_data=args.dump_data)
 
         if pygame.K_LEFT in pressed_keys:
-            eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, 1 * delta_time)
+            try:
+                max_rot_vel = 2 * (eng.bots[0].real.max_vel - eng.bots[0].real.vel) / (eng.bots[0].real.width * eng.bots[0].real.vel)
+                #max_rot_vel = 2.0
+                eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, max_rot_vel * delta_time)
+            except ZeroDivisionError:
+                pass
         if pygame.K_RIGHT in pressed_keys:
-            eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, -1 * delta_time)
+            try:
+                max_rot_vel = 2 * (eng.bots[0].real.max_vel - eng.bots[0].real.vel) / (eng.bots[0].real.width * eng.bots[0].real.vel)
+                #max_rot_vel = 2.0
+                eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, -max_rot_vel * delta_time)
+            except ZeroDivisionError:
+                pass
         if pygame.K_UP in pressed_keys:
             eng.bots[0].real.vel += 1 * eng.bots[0].real.max_accel * delta_time
         if pygame.K_DOWN in pressed_keys:
