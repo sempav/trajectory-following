@@ -387,27 +387,17 @@ class Follower(BehaviorBase):
                 p_st = Point(self.x_approx(self.t_st), self.y_approx(self.t_st))
                 p_fn = Point(self.x_approx(self.t_fn), self.y_approx(self.t_fn))
 
-                p = p_st
-                p2 = p
-                t = self.t_st
-                it = 0
-                while it < TRAJECTORY_SEGMENT_COUNT and min(dist(p, p_st), dist(p, p_fn)) < 0.5:
-                    it += 1
-                    draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
-                    t -= step
-                    p2 = p
-                    p = Point(self.x_approx(t), self.y_approx(t))
-
+                step = 0.5 / TRAJECTORY_SEGMENT_COUNT
                 p = p_fn
                 p2 = p
                 t = self.t_fn
                 it = 0
-                while it < TRAJECTORY_SEGMENT_COUNT and min(dist(p, p_fn), dist(p, p_st)) < 0.5:
+                while it < TRAJECTORY_SEGMENT_COUNT and min(dist(p, p_fn), dist(p, p_st)) < 1.0:
                     it += 1
-                    draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
                     t += step
                     p2 = p
                     p = Point(self.x_approx(t), self.y_approx(t))
+                    draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
 
         except AttributeError as e: # approximation hasn't been calculated yet
             pass
