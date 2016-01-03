@@ -235,45 +235,45 @@ class Follower(BehaviorBase):
         omega_ff = omega_fun(t)
 
         # x_r, y_r and theta_r denote the reference robot's state
-        x_r = self.x_approx(t)
-        y_r = self.y_approx(t)
-        self.target_point = Point(x_r, y_r)
-        theta_r = atan2(dy(t), dx(t))
-
+        r = State(x=self.x_approx(t), y=self.y_approx(t),
+                  theta=atan2(dy(t), dx(t)))
+        self.target_point = Point(r.x, r.y)
 
         if isnan(v_ff):
             v_ff = 0.0
         if isnan(omega_ff):
             omega_ff = 0.0
 
-        # cur_x, cur_y and cur_theta form the current state vector
-        cur_x = self.pos.x
-        cur_y = self.pos.y
-        cur_theta = atan2(self.real_dir.y, self.real_dir.x)
+        # cur is the current state
+        cur = State(x=self.pos.x,
+                    y=self.pos.y,
+                    theta=atan2(self.real_dir.y, self.real_dir.x))
 
-        # calculate error in the global (fixed) reference frame
-        delta_x = x_r - cur_x
-        delta_y = y_r - cur_y
-        delta_theta = theta_r - cur_theta
+        # error in the global (fixed) reference frame
+        delta = State(x=r.x - cur.x,
+                      y=r.y - cur.y,
+                      theta=(r.theta - cur.theta) % (2 * pi))
+        if delta.theta > pi:
+            delta = State(x=delta.x,
+                          y=delta.y,
+                          theta=delta.theta - 2 * pi)
 
         # translate error into the follower's reference frame
-        e_x =  cos(cur_theta) * delta_x + sin(cur_theta) * delta_y
-        e_y = -sin(cur_theta) * delta_x + cos(cur_theta) * delta_y
-        e_theta = delta_theta % (2 * pi)
-        if e_theta > pi:
-            e_theta -= 2 * pi
-        #e_theta = delta_theta
+        e = State(x= cos(cur.theta) * delta.x + sin(cur.theta) * delta.y,
+                  y=-sin(cur.theta) * delta.x + cos(cur.theta) * delta.y,
+                  theta=delta.theta)
 
         # calculate gains k_x, k_y, k_theta
+        # these are just parameters, not a state in any sense!
         omega_n = sqrt(omega_ff**2 + self.g * v_ff**2)
         k_x = 2 * self.zeta * omega_n
         k_y = self.g
         k_theta = 2 * self.zeta * omega_n
 
         # calculate control velocities
-        v = v_ff * cos(e_theta) + k_x * e_x
-        se = sin(e_theta) / e_theta if e_theta != 0 else 1.0
-        omega = omega_ff + k_y * v_ff * se * e_y + k_theta * e_theta
+        v = v_ff * cos(e.theta) + k_x * e.x
+        se = sin(e.theta) / e.theta if e.theta != 0 else 1.0
+        omega = omega_ff + k_y * v_ff * se * e.y + k_theta * e.theta
 
         #v = v_ff
         #omega = omega_ff
@@ -292,9 +292,9 @@ class Follower(BehaviorBase):
             leader_theta = lerp_angles(a.theta, b.theta, coeff)
             self.orig_leader_pos = leader_pos
             self.orig_leader_theta = leader_theta
-            real_delta_x = leader_pos.x - cur_x
-            real_delta_y = leader_pos.y - cur_y
-            real_delta_theta = leader_theta - cur_theta
+            real_delta_x = leader_pos.x - cur.x
+            real_delta_y = leader_pos.y - cur.y
+            real_delta_theta = leader_theta - cur.theta
             real_e_x = real_delta_x
             real_e_y = real_delta_y
             real_e_theta = real_delta_theta % (2 * pi)
