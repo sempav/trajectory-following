@@ -1,8 +1,5 @@
 from base import BehaviorBase
-from engine.bot import BOT_RADIUS, BOT_VEL_CAP, BOT_ACCEL_CAP
-from engine.vector import Vector, length, normalize, dist
-from math import sin, cos, pi, sqrt
-from collections import namedtuple
+from engine.bot import BOT_RADIUS
 
 class Leader(BehaviorBase):
     def __init__(self):
