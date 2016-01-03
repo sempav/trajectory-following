@@ -292,14 +292,11 @@ class Follower(BehaviorBase):
             real_delta_x = leader_pos.x - cur_x
             real_delta_y = leader_pos.y - cur_y
             real_delta_theta = leader_theta - cur_theta
-            real_e_x =  cos(cur_theta) * real_delta_x + sin(cur_theta) * real_delta_y
-            real_e_y = -sin(cur_theta) * real_delta_x + cos(cur_theta) * real_delta_y
+            real_e_x = real_delta_x
+            real_e_y = real_delta_y
             real_e_theta = real_delta_theta % (2 * pi)
             if real_e_theta > pi:
                 real_e_theta -= 2 * pi;
-
-        #if abs(real_e_theta) > 0.5:
-        #    print str(self.id) + ":", cur_theta, "ref:", self.orig_leader_theta, "err:", real_e_theta
 
         if self.dump_file is not None:
             dump_dict = {"id": self.id,
