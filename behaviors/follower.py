@@ -22,17 +22,18 @@ from math import sin, cos, pi, atan2, sqrt, copysign, isnan, log
 from random import gauss
 import numpy as np
 
+
 TRAJECTORY_SIZE = 100
 SAMPLE_COUNT = 40
-MIN_DISTANCE_TO_LEADER = 0.1
+MIN_DISTANCE_TO_LEADER = 2 * BOT_RADIUS
 DISABLE_CIRCLES = False
 CIRCLE_SHRINKING_COEFF = log(0.8)
 
 TRAJECTORY_SEGMENT_COUNT = 10
-DISPLAYED_POINTS_COUNT = 10
+DISPLAYED_POINTS_COUNT = 0
 DISPLAYED_USED_POINTS_COUNT = 0
 
-DEFAULT_FOV = 0.5 * pi
+DEFAULT_FOV = 0.25 * pi
 
 Instr = namedtuple('Instr', 'v, omega')
 TrajectoryPoint = namedtuple('TrajectoryPoint', 'time, pos')
