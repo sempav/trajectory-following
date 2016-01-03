@@ -376,7 +376,7 @@ class Follower(BehaviorBase):
                 #        draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
                 #        p2 = p
 
-                step = 0.1 * (self.t_fn - self.t_st)
+                step = (self.t_fn - self.t_st) / TRAJECTORY_SEGMENT_COUNT
                 for t in (self.t_st + k * step for k in xrange(TRAJECTORY_SEGMENT_COUNT)):
                     p = Point(self.x_approx(t),
                               self.y_approx(t))
