@@ -280,9 +280,7 @@ class Follower(BehaviorBase):
 
         orig_t = engine.time - self.orig_leader_delay
         orig_arr = get_interval(self.orig_leader_states, orig_t, 3)
-        real_e_x = 0.0
-        real_e_y = 0.0
-        real_e_theta = 0.0
+        real_e = State(0.0, 0.0, 0.0)
         if len(orig_arr) >= 2:
             a = orig_arr[-2]
             b = orig_arr[-1]
@@ -292,14 +290,12 @@ class Follower(BehaviorBase):
             leader_theta = lerp_angles(a.theta, b.theta, coeff)
             self.orig_leader_pos = leader_pos
             self.orig_leader_theta = leader_theta
-            real_delta_x = leader_pos.x - cur.x
-            real_delta_y = leader_pos.y - cur.y
-            real_delta_theta = leader_theta - cur.theta
-            real_e_x = real_delta_x
-            real_e_y = real_delta_y
-            real_e_theta = real_delta_theta % (2 * pi)
-            if real_e_theta > pi:
-                real_e_theta -= 2 * pi;
+            real_delta = State(x=leader_pos.x - cur.x,
+                               y=leader_pos.y - cur.y,
+                               theta=(leader_theta - cur.theta) % (2 * pi))
+            if real_delta.theta > pi:
+                real_delta = State(x=real_delta.x, y=real_delta.y, theta=real_delta.theta - 2 * pi)
+            real_e = real_delta
 
         if self.dump_file is not None:
             dump_dict = {"id": self.id,
@@ -309,12 +305,12 @@ class Follower(BehaviorBase):
                          "omega": omega,
                          "v_ff": v_ff,
                          "omega_ff": omega_ff,
-                         "e_x": e_x,
-                         "e_y": e_y,
-                         "e_theta": e_theta,
-                         "real_e_x": real_e_x,
-                         "real_e_y": real_e_y,
-                         "real_e_theta": real_e_theta}
+                         "e_x": e.x,
+                         "e_y": e.y,
+                         "e_theta": e.theta,
+                         "real_e_x": real_e.x,
+                         "real_e_y": real_e.y,
+                         "real_e_theta": real_e.theta}
             print >> self.dump_file, dump_dict
 
         return Instr(v,  omega)
