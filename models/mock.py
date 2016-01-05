@@ -1,7 +1,7 @@
 from engine.bot import BOT_VEL_CAP, BOT_ACCEL_CAP, BOT_RADIUS
 from engine.vector import Point, normalize, length
 from math import pi, copysign, sin, cos
-from engine.graphics import draw_circle, draw_line, BOT_COLOR
+from engine.graphics import draw_directed_circle, BOT_COLOR
 
 class MockModel(object):
     def __init__(self, pos, dir, vel=0.0,
@@ -50,6 +50,6 @@ class MockModel(object):
 
 
     def draw(self, screen, field):
-        draw_circle(screen, field, BOT_COLOR,
-                           self.pos,
-                           self.radius, 1)
+        draw_directed_circle(screen, field, BOT_COLOR,
+                             self.pos,
+                             self.radius, self.dir, 1)
