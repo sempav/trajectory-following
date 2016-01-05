@@ -197,8 +197,8 @@ class Follower(BehaviorBase):
         k = (known_dx(times[-1]) * 2 * y_poly[0] - known_dy(times[-1]) * 2 * x_poly[0]) / (known_dx(times[-1])**2 + known_dy(times[-1])**2)**1.5
         if abs(k) < MIN_CIRCLE_CURVATURE:
             k = copysign(MIN_CIRCLE_CURVATURE, k)
-            if k == 0.0 or isnan(k):
-                k = MIN_CIRCLE_CURVATURE
+        if k == 0.0 or isnan(k):
+            k = MIN_CIRCLE_CURVATURE
         if DISABLE_CIRCLES:
             self.x_approx = known_x_approx
             self.y_approx = known_y_approx
