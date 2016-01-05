@@ -23,7 +23,7 @@ from random import gauss
 import numpy as np
 
 
-TRAJECTORY_SIZE = 100
+RECORDED_POSITIONS_CNT = 100
 SAMPLE_COUNT = 40
 MIN_DISTANCE_TO_LEADER = 2 * BOT_RADIUS
 DISABLE_CIRCLES = False
@@ -36,8 +36,8 @@ DISPLAYED_USED_POINTS_COUNT = 0
 DEFAULT_FOV = 0.25 * pi
 
 Instr = namedtuple('Instr', 'v, omega')
-TrajectoryPoint = namedtuple('TrajectoryPoint', 'time, pos')
-LeaderState = namedtuple('LeaderState', 'time, pos, theta')
+TimedPosition = namedtuple('TimedPosition', 'time, pos')
+TimedState = namedtuple('TimedState', 'time, pos, theta')
 # used to represent bot's state vector: x, y, theta
 State = namedtuple('State', 'x, y, theta')
 
@@ -86,16 +86,17 @@ class Follower(BehaviorBase):
         assert 0 < zeta < 1, "Follower: zeta parameter must be in (0, 1)"
         self.zeta = zeta
 
-        # trajectory stores TRAJECTORY_SIZE tuples;
+        # leader_positions stores RECORDED_POSITIONS_CNT tuples;
         # tuple's first field is time, second is the
-        # corresponding Point on the trajectory
-        self.trajectory = RingBuffer(TRAJECTORY_SIZE)
+        # corresponding position of the leader
+        self.leader_positions = RingBuffer(RECORDED_POSITIONS_CNT)
 
         # orig_leader_states stores leader's precise state;
-        # used to plot errors
+        # used to export "real" errors (as opposed to calculated
+        # w.r.t. the approximation curve)
         self.orig_leader_states = []
 
-        self.update_interval = trajectory_delay / (TRAJECTORY_SIZE - SAMPLE_COUNT // 2)
+        self.update_interval = trajectory_delay / (RECORDED_POSITIONS_CNT - SAMPLE_COUNT // 2)
         self.last_update_time = 0.0
 
         self.noise_sigma = noise_sigma
@@ -151,14 +152,14 @@ class Follower(BehaviorBase):
             noisy_pos += Vector(gauss(0.0, self.noise_sigma),
                                 gauss(0.0, self.noise_sigma))
             self.leader_noisy_pos = noisy_pos
-            self.trajectory.append(TrajectoryPoint(engine.time, noisy_pos))
+            self.leader_positions.append(TimedPosition(engine.time, noisy_pos))
             self.last_update_time = engine.time
         else:
             self.leader_is_visible = False
 
         orig_leader_theta = atan2(self.orig_leader.real.dir.y,
                                   self.orig_leader.real.dir.x)
-        self.orig_leader_states.append(LeaderState(time=engine.time,
+        self.orig_leader_states.append(TimedState(time=engine.time,
                                                    pos=self.orig_leader.real.pos,
                                                    theta=orig_leader_theta))
 
@@ -169,7 +170,7 @@ class Follower(BehaviorBase):
             self.store_leaders_state(engine, obstacles)
 
         t = engine.time - self.trajectory_delay
-        arr = get_interval(self.trajectory, t, SAMPLE_COUNT)
+        arr = get_interval(self.leader_positions, t, SAMPLE_COUNT)
         self.traj_interval = arr
         if len(arr) == 0:
             return Instr(0.0, 0.0)
@@ -322,8 +323,8 @@ class Follower(BehaviorBase):
 
     def draw(self, screen, field):
         if DISPLAYED_POINTS_COUNT > 0:
-            k = TRAJECTORY_SIZE / DISPLAYED_POINTS_COUNT
-            for index, (time, point) in enumerate(self.trajectory):
+            k = RECORDED_POSITIONS_CNT / DISPLAYED_POINTS_COUNT
+            for index, (time, point) in enumerate(self.leader_positions):
                 if index % k == 0:
                     draw_circle(screen, field, TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
 
