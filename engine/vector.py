@@ -15,7 +15,10 @@ def dist(a, b):
     return length( (a[0] - b[0], a[1] - b[1]) )
 
 def normalize(v):
-    return Vector(v[0] / length(v), v[1] / length(v))
+    if length(v) > geom_eps:
+        return Vector(v[0] / length(v), v[1] / length(v))
+    else:
+        raise ZeroDivisionError, "attempted to normalize a zero vector"
 
 def dot(a, b):
     return a[0] * b[0] + a[1] * b[1]
@@ -81,4 +84,3 @@ Vector.__eq__ = __eq__
 Vector.__ne__ = __ne__
 
 Point = Vector
-

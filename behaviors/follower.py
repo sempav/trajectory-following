@@ -209,7 +209,11 @@ class Follower(BehaviorBase):
         else:
             radius = abs(1.0/k)
             # trajectory direction at time t_fn
-            d = normalize(Vector(known_dx(times[-1]), known_dy(times[-1])))
+            try:
+                d = normalize(Vector(known_dx(times[-1]), known_dy(times[-1])))
+            except ZeroDivisionError:
+                d = self.real_dir
+
             r = Vector(-d.y, d.x) / k
             center = Point(x_pos[-1], y_pos[-1]) + r
             phase = atan2(-r.y, -r.x)
