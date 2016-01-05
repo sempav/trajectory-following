@@ -16,6 +16,7 @@ from engine.graphics import draw_circle, draw_line, draw_arc, \
                             DRAW_DELAYED_LEADER_POS
 from engine.shapes import Ray, first_intersection
 from ring_buffer import RingBuffer, get_interval
+from trajectory import Trajectory
 
 from collections import namedtuple
 from math import sin, cos, pi, atan2, sqrt, copysign, isnan, log
@@ -185,52 +186,46 @@ class Follower(BehaviorBase):
         # calculate quadratic approximation of the reference trajectory
         x_poly = np.polyfit(times, x_pos, deg=2)
         y_poly = np.polyfit(times, y_pos, deg=2)
-        known_x_approx = np.poly1d(x_poly)
-        known_y_approx = np.poly1d(y_poly)
-        known_dx = np.poly1d([2 * x_poly[0], x_poly[1]])
-        known_dy = np.poly1d([2 * y_poly[0], y_poly[1]])
+        known = Trajectory.from_poly(x_poly, y_poly)
         self.t_st = times[0]
         self.t_fn = max(times[-1], t)
 
         # now adding a circle to the end of known trajectory
         # k is signed curvature of the trajectry at t_fn
-        # k = omega_fun(times[-1])/v_fun(times[-1])
-        k = (known_dx(times[-1]) * 2 * y_poly[0] - known_dy(times[-1]) * 2 * x_poly[0]) / (known_dx(times[-1])**2 + known_dy(times[-1])**2)**1.5
+        try:
+            k = known.curvature(times[-1])
+        except ValueError:
+            k = 0.0
         if abs(k) < MIN_CIRCLE_CURVATURE:
             k = copysign(MIN_CIRCLE_CURVATURE, k)
-        if k == 0.0 or isnan(k):
-            k = MIN_CIRCLE_CURVATURE
         if DISABLE_CIRCLES:
-            self.x_approx = known_x_approx
-            self.y_approx = known_y_approx
-            dx = known_dx
-            dy = known_dy
-            ddx = lambda time: 2 * x_poly[0]
-            ddy = lambda time: 2 * y_poly[0]
+            self.trajectory = known
         else:
             radius = abs(1.0/k)
             # trajectory direction at time t_fn
             try:
-                d = normalize(Vector(known_dx(times[-1]), known_dy(times[-1])))
+                d = normalize(Vector(known.dx(times[-1]), known.dy(times[-1])))
             except ValueError:
                 d = self.real_dir
 
             r = Vector(-d.y, d.x) / k
             center = Point(x_pos[-1], y_pos[-1]) + r
             phase = atan2(-r.y, -r.x)
-            freq = known_dx(times[-1]) / r.y
-            self.x_approx = lambda time: known_x_approx(time) if time < times[-1] else \
+            freq = known.dx(times[-1]) / r.y
+            self.x_approx = lambda time: known.x(time) if time < times[-1] else \
                                          center.x + radius * cos(freq * (time - times[-1]) + phase)
-            self.y_approx = lambda time: known_y_approx(time) if time < times[-1] else \
+            self.y_approx = lambda time: known.y(time) if time < times[-1] else \
                                          center.y + radius * sin(freq * (time - times[-1]) + phase)
-            dx = lambda time: known_dx(time) if time < times[-1] else \
+            dx = lambda time: known.dx(time) if time < times[-1] else \
                               -radius * freq * sin(freq * (time - times[-1]) + phase)
-            dy = lambda time: known_dy(time) if time < times[-1] else \
+            dy = lambda time: known.dy(time) if time < times[-1] else \
                               radius * freq * cos(freq * (time - times[-1]) + phase)
             ddx = lambda time: 2 * x_poly[0] if time < times[-1] else \
                               -radius * freq * freq * cos(freq * (time - times[-1]) + phase)
             ddy = lambda time: 2 * y_poly[0] if time < times[-1] else \
                               -radius * freq * freq * sin(freq * (time - times[-1]) + phase)
+            self.trajectory = Trajectory(x=self.x_approx, y=self.y_approx,
+                                         dx=dx, dy=dy, ddx=ddx, ddy=ddy)
 
         # calculate the feed-forward velocities
         v_fun = lambda time: sqrt(dx(time)**2 + dy(time)**2)
@@ -240,8 +235,10 @@ class Follower(BehaviorBase):
         omega_ff = omega_fun(t)
 
         # x_r, y_r and theta_r denote the reference robot's state
-        r = State(x=self.x_approx(t), y=self.y_approx(t),
-                  theta=atan2(dy(t), dx(t)))
+        r = State(x=self.trajectory.x(t),
+                  y=self.trajectory.y(t),
+                  theta=atan2(self.trajectory.dy(t),
+                              self.trajectory.dx(t)))
         self.target_point = Point(r.x, r.y)
 
         if isnan(v_ff):
@@ -382,14 +379,14 @@ class Follower(BehaviorBase):
 
                 step = (self.t_fn - self.t_st) / TRAJECTORY_SEGMENT_COUNT
                 for t in (self.t_st + k * step for k in xrange(TRAJECTORY_SEGMENT_COUNT)):
-                    p = Point(self.x_approx(t),
-                              self.y_approx(t))
-                    p2 = Point(self.x_approx(t + step),
-                               self.y_approx(t + step))
+                    p = Point(self.trajectory.x(t),
+                              self.trajectory.y(t))
+                    p2 = Point(self.trajectory.x(t + step),
+                               self.trajectory.y(t + step))
                     draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
 
-                p_st = Point(self.x_approx(self.t_st), self.y_approx(self.t_st))
-                p_fn = Point(self.x_approx(self.t_fn), self.y_approx(self.t_fn))
+                p_st = Point(self.trajectory.x(self.t_st), self.trajectory.y(self.t_st))
+                p_fn = Point(self.trajectory.x(self.t_fn), self.trajectory.y(self.t_fn))
 
                 step = 0.5 / TRAJECTORY_SEGMENT_COUNT
                 p = p_fn
@@ -400,7 +397,7 @@ class Follower(BehaviorBase):
                     it += 1
                     t += step
                     p2 = p
-                    p = Point(self.x_approx(t), self.y_approx(t))
+                    p = Point(self.trajectory.x(t), self.trajectory.y(t))
                     draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
 
         except AttributeError as e: # approximation hasn't been calculated yet
