@@ -47,3 +47,28 @@ class Field(object):
         #if abs(self.resolution[0] / self.width - self.resolution[1] / self.height) > EPSILON:
         #    raise RuntimeError("Field has non-uniform scale")
         return int(dist * (self.resolution[0] / self.width))
+
+
+    def resize_to_contain(self, points):
+        """ Uniformly scale the field up so that all points are inside it."""
+
+        cleft   = self.left
+        cright  = self.right
+        cbottom = self.bottom
+        ctop    = self.top
+        for p in points:
+            cleft   = min(cleft,   p.x)
+            cright  = max(cright,  p.x)
+            cbottom = min(cbottom, p.y)
+            ctop    = max(ctop,    p.y)
+        scale_w = (cright - cleft) / self.width
+        scale_h = (ctop - cbottom) / self.height
+        scale = max(scale_w, scale_h)
+        self.width *= scale
+        self.height *= scale
+        self.left *= scale
+        self.right *= scale
+        self.bottom *= scale
+        self.top *= scale
+        #field.width = field.right - field.left
+        #field.height = field.top - field.bottom

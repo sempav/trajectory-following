@@ -115,26 +115,7 @@ def main(args):
     pressed_keys = set()
 
     while not finished:
-        cleft = field.left
-        cright = field.right
-        ctop = field.top
-        cbottom = field.bottom
-        for bot in eng.bots:
-            cleft = min(cleft, bot.real.pos.x)
-            cright = max(cright, bot.real.pos.x)
-            ctop = max(ctop, bot.real.pos.y)
-            cbottom = min(cbottom, bot.real.pos.y)
-        scale_w = (cright - cleft) / field.width
-        scale_h = (ctop - cbottom) / field.height
-        scale = max(scale_w, scale_h)
-        field.width *= scale
-        field.height *= scale
-        field.left *= scale
-        field.right *= scale
-        field.top *= scale
-        field.bottom *= scale
-        #field.width = field.right - field.left
-        #field.height = field.top - field.bottom
+        eng.field.resize_to_contain(bot.real.pos for bot in eng.bots)
 
         real_delta_time = 0.001 * clock.tick(FRAMERATE)
         delta_time = 1.0 / FRAMERATE
