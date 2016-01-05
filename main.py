@@ -94,7 +94,7 @@ def main(args):
 
     #pygame.display.init()
     info = pygame.display.Info()
-    size = (info.current_w - 1, info.current_h - 20)
+    size = (info.current_w - 10, info.current_h - 100)
     field = Field((0.01 * size[0], 0.01 * size[1]), size)
     graph = Graphics(field, size)
     eng = engine.Engine(field)
