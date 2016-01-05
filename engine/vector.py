@@ -18,7 +18,7 @@ def normalize(v):
     if length(v) > geom_eps:
         return Vector(v[0] / length(v), v[1] / length(v))
     else:
-        raise ZeroDivisionError, "attempted to normalize a zero vector"
+        raise ValueError, "attempted to normalize a zero vector"
 
 def dot(a, b):
     return a[0] * b[0] + a[1] * b[1]

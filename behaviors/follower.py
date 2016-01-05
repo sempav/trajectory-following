@@ -137,7 +137,7 @@ class Follower(BehaviorBase):
             return False
         try:
             ray = Ray(self.pos, p - self.pos)
-        except ZeroDivisionError:
+        except ValueError:
             ray = Ray(self.pos, Vector(1.0, 0.0))
         i = first_intersection(ray, obstacles)
         return (i is None) or (length(i - self.pos) > length(p - self.pos))
@@ -211,7 +211,7 @@ class Follower(BehaviorBase):
             # trajectory direction at time t_fn
             try:
                 d = normalize(Vector(known_dx(times[-1]), known_dy(times[-1])))
-            except ZeroDivisionError:
+            except ValueError:
                 d = self.real_dir
 
             r = Vector(-d.y, d.x) / k

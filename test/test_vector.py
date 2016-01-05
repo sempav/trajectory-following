@@ -25,8 +25,9 @@ class VectorTestCase(unittest.TestCase):
                          Vector(0.5 * 2**0.5, 0.5 * 2**0.5))
         self.assertEqual(normalize(Vector(0.01, 0.0)),
                          Vector(1.0, 0.0))
-        with self.assertRaises(ZeroDivisionError):
+        with self.assertRaises(ValueError):
             normalize(Vector(0.0, 0.0))
+            normalize(Vector(1.0 - 7.0 * (1.0/7.0), 1.0 - 3.0 * (1.0/3.0)))
 
 
     def testDotProduct(self):
