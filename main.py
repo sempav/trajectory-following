@@ -166,6 +166,8 @@ def main(args):
                 elif event.key >= pygame.K_1 and event.key <= pygame.K_9:
                     cur_obstacle_map = event.key - pygame.K_1
                     reset_needed = True
+                elif event.key == pygame.K_ESCAPE:
+                    finished = True
 
                 if reset_needed:
                     reset(eng, obstacle_map=cur_obstacle_map, model=cur_model,
