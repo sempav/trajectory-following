@@ -68,7 +68,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
                                                     orig_leader_delay=1.0 * (i + 1),
                                                     noise_sigma=0.0,
                                                     dump_file=dump_file,
-                                                    id="follower %02d" % (i + 1))))
+                                                    id="%02d" % (i + 1))))
 
     eng.obstacles = maps[obstacle_map][:]
 
