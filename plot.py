@@ -67,7 +67,7 @@ def plot(header, data, output_filename):
         v_data.append(d["v"])
         omega_data.append(d["omega"])
 
-    legends = []
+    artists = []
 
     fig = plt.figure()
     axes = plt.subplot(321)
@@ -76,27 +76,27 @@ def plot(header, data, output_filename):
     axes.grid()
     #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    legends.append(lgd)
+    artists.append(lgd)
 
     axes = plt.subplot(323)
-    real_e, = axes.plot(time_data, real_e_data, '-', label=r'$\Vert e_x\Vert$')
+    real_e, = axes.plot(time_data, real_e_data, '-', label=r'real $\Vert e\Vert$')
     axes.grid()
     #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    legends.append(lgd)
+    artists.append(lgd)
 
     axes = plt.subplot(322)
     et, = axes.plot(time_data, et_data, 'r-', label=r'$e_\theta$')
     axes.grid()
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    legends.append(lgd)
+    artists.append(lgd)
     #axes.set_ylim([-pi, pi])
 
     axes = plt.subplot(324)
     real_et, = axes.plot(time_data, real_et_data, 'r-', label=r'real $e_\theta$')
     axes.grid()
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    legends.append(lgd)
+    artists.append(lgd)
     #axes.set_ylim([-pi, pi])
 
     axes = plt.subplot(325)
@@ -104,13 +104,13 @@ def plot(header, data, output_filename):
     axes.grid()
     #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    legends.append(lgd)
+    artists.append(lgd)
 
     axes = plt.subplot(326)
     eomega, = axes.plot(time_data, omega_data, '-', label=r'$\omega$')
     axes.grid()
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    legends.append(lgd)
+    artists.append(lgd)
 
     #fig.tight_layout()
 
@@ -118,13 +118,15 @@ def plot(header, data, output_filename):
 
     fig.subplots_adjust(hspace=0.3, wspace=1.0)
 
-    #fig.suptitle("id " + str(id) + "\r" + \
-    #             r"Noise: $\sigma=" + str(title_data['noise_sigma']) + '$ ' + \
-    #             "\rRef. points = " + str(title_data['reference_points_cnt']) + \
-    #             "\rdelay = " + str(title_data['trajectory_delay']))
+    suptitle = plt.suptitle("id " + str(header['id']) + ", " + \
+         r"Noise: $\sigma=" + str(header['noise_sigma']) + '$ ' + \
+         ", Ref. points = " + str(header['reference_points_cnt']) + \
+         ", delay = " + str(header['trajectory_delay']), y=0.05)
+    artists.append(suptitle)
 
 
-    plt.savefig(output_filename, dpi=150, bbox_extra_artists=legends, bbox_inches='tight')
+    plt.savefig(output_filename, dpi=150, bbox_extra_artists=artists,
+                bbox_inches='tight')
     #plt.show()
 
 
