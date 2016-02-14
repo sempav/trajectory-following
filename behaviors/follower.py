@@ -134,7 +134,7 @@ class Follower(BehaviorBase):
         return -0.5 * self.visibility_fov < ang < 0.5 * self.visibility_fov
 
 
-    def visible_point(self, p, obstacles):
+    def point_is_visible(self, p, obstacles):
         if not self.point_in_fov(p):
             return False
         try:
@@ -146,7 +146,7 @@ class Follower(BehaviorBase):
 
 
     def store_leaders_state(self, engine, obstacles):
-        if self.visible_point(self.leader.real.pos, obstacles):
+        if self.point_is_visible(self.leader.real.pos, obstacles):
             self.leader_is_visible = True
 
             noisy_pos = self.leader.real.pos
