@@ -190,34 +190,38 @@ class Follower(BehaviorBase):
             k = MIN_CIRCLE_CURVATURE
         if abs(k) < MIN_CIRCLE_CURVATURE:
             k = copysign(MIN_CIRCLE_CURVATURE, k)
-        if DISABLE_CIRCLES:
-            return known
-        else:
-            radius = abs(1.0/k)
-            # trajectory direction at time t_fn
-            try:
-                d = normalize(Vector(known.dx(last_t), known.dy(last_t)))
-            except ValueError:
-                d = self.real_dir
 
-            r = Vector(-d.y, d.x) / k
-            center = Point(last_x, last_y) + r
-            phase = atan2(-r.y, -r.x)
-            freq = known.dx(last_t) / r.y
-            self.x_approx = lambda time: known.x(time) if time < last_t else \
-                                         center.x + radius * cos(freq * (time - last_t) + phase)
-            self.y_approx = lambda time: known.y(time) if time < last_t else \
-                                         center.y + radius * sin(freq * (time - last_t) + phase)
-            dx = lambda time: known.dx(time) if time < last_t else \
-                              -radius * freq * sin(freq * (time - last_t) + phase)
-            dy = lambda time: known.dy(time) if time < last_t else \
-                              radius * freq * cos(freq * (time - last_t) + phase)
-            ddx = lambda time: known.ddx(time) if time < last_t else \
-                              -radius * freq * freq * cos(freq * (time - last_t) + phase)
-            ddy = lambda time: known.ddy(time) if time < last_t else \
-                              -radius * freq * freq * sin(freq * (time - last_t) + phase)
-            return Trajectory(x=self.x_approx, y=self.y_approx,
-                              dx=dx, dy=dy, ddx=ddx, ddy=ddy)
+        radius = abs(1.0/k)
+        # trajectory direction at time t_fn
+        try:
+            d = normalize(Vector(known.dx(last_t), known.dy(last_t)))
+        except ValueError:
+            d = self.real_dir
+
+        r = Vector(-d.y, d.x) / k
+        center = Point(last_x, last_y) + r
+        phase = atan2(-r.y, -r.x)
+        freq = known.dx(last_t) / r.y
+        self.x_approx = lambda time: known.x(time) if time < last_t else \
+                                     center.x + radius * cos(freq * (time - last_t) + phase)
+        self.y_approx = lambda time: known.y(time) if time < last_t else \
+                                     center.y + radius * sin(freq * (time - last_t) + phase)
+        dx = lambda time: known.dx(time) if time < last_t else \
+                          -radius * freq * sin(freq * (time - last_t) + phase)
+        dy = lambda time: known.dy(time) if time < last_t else \
+                          radius * freq * cos(freq * (time - last_t) + phase)
+        ddx = lambda time: known.ddx(time) if time < last_t else \
+                          -radius * freq * freq * cos(freq * (time - last_t) + phase)
+        ddy = lambda time: known.ddy(time) if time < last_t else \
+                          -radius * freq * freq * sin(freq * (time - last_t) + phase)
+        # FIXME: don't use division by y if y == 0
+        try:
+            if isnan(self.x_approx(last_t + 1)):
+                return known
+        except Exception:
+            return known
+        return Trajectory(x=self.x_approx, y=self.y_approx,
+                          dx=dx, dy=dy, ddx=ddx, ddy=ddy)
 
 
 
@@ -227,7 +231,10 @@ class Follower(BehaviorBase):
         if len(arr) == 0:
             return None
         known, last_x, last_y, last_t = self.polyfit_trajectory(arr, t)
-        return self.extend_trajectory(known, last_x, last_y, last_t)
+        if DISABLE_CIRCLES:
+            return known
+        else:
+            return self.extend_trajectory(known, last_x, last_y, last_t)
 
 
     def calc_desired_velocity(self, bots, obstacles, targets, engine):
