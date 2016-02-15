@@ -73,9 +73,7 @@ class Engine(object):
         collided_set = set()
         for bot in self.bots:
             collided_flag = bot in collided_set
-            if collided_flag:
-                continue
-            if include_bot_collisions:
+            if not collided_flag and include_bot_collisions:
                 # check for collisions with other bots
                 for other in self.bots:
                     if bot is not other: # don't check for collisions with self
