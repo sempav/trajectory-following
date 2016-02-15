@@ -23,6 +23,9 @@ FRAMES_PER_BOT_UPDATE = 1
 NUM_FOLLOWERS = 1
 
 
+DEFAULT_START_POS = Point(4.0, 0.0)
+
+
 def create_log_file():
     fname = "data"
     fnumber = 1
@@ -45,7 +48,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
 
     if interactive:
         pos_fun=None
-        start_pos = Point(0.0, 0.0)
+        start_pos = DEFAULT_START_POS
         start_dir = Vector(1.0, 0.0)
         eng.bots.append(Bot(models.MockModel(pos=start_pos, dir=start_dir, vel=0.0, pos_fun=pos_fun),
                             behavior=behaviors.Leader()))
@@ -114,6 +117,8 @@ def main(args):
     paused = False
 
     pressed_keys = set()
+
+    collision_has_occurred = False
 
     while not finished:
         eng.field.resize_to_contain(bot.real.pos for bot in eng.bots)
@@ -185,11 +190,18 @@ def main(args):
             eng.update_bots()
         eng.update_physics(delta_time)
 
+        collided_set = eng.check_collisions()
+
         graph.render(bots = eng.bots,
                      obstacles = eng.obstacles,
                      targets = eng.targets)
 
         text = ("Time: %.3f" % eng.time) + ("s, FPS: %.2f" % (1.0 / real_delta_time))
+        if collided_set: # a collision occurred
+            text += ". COLLISION"
+            collision_has_occurred = True
+        if collision_has_occurred:
+            text += ". A collision has been recorded"
         ren = font.render(text, 0, (255, 255, 255))
         text_size = font.size(text)
         graph.screen.blit(ren, (30, graph.size[1] - text_size[1]))

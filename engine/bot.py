@@ -12,6 +12,9 @@ class Bot(object):
         self.real = model
         self.virtual.sync_to_real(self.real)
 
+        self.collided = False
+        self.has_collided_before = False
+
     def draw(self, screen, field):
-        self.real.draw(screen, field)
+        self.real.draw(screen, field, self.collided, self.has_collided_before)
         self.virtual.draw(screen, field)

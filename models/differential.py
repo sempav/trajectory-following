@@ -2,6 +2,7 @@ from engine.bot import BOT_VEL_CAP, BOT_ACCEL_CAP, BOT_RADIUS
 from engine.vector import Point, Vector, length, normalize, rotate, signed_angle
 from math import pi, copysign
 from engine.graphics import draw_circle, draw_line, draw_directed_circle, BOT_COLOR
+from engine.shapes import Circle
 
 MIN_ROTATION_ANGLE = 0.00 * pi
 ROTATION_GAIN = 1.0 # !before changing check abs_vel *= cos(ang) line
@@ -21,6 +22,8 @@ class DifferentialModel(object):
         self.radius = radius
         self.width = 2.0 * radius
         self.max_rot_vel = 2 * max_vel / self.width
+
+        self.shape = Circle(self.pos, self.radius)
 
 
     @property
@@ -67,8 +70,10 @@ class DifferentialModel(object):
     def update_state(self, delta_time):
         self.pos += delta_time * self.vel * self.dir
         self.dir = rotate(self.dir, delta_time * self.rot_vel)
+        self.shape.center = self.pos
 
 
-    def draw(self, screen, field):
+    def draw(self, screen, field, collided, has_collided_before):
         draw_directed_circle(screen, field, BOT_COLOR,
-                             self.pos, BOT_RADIUS, self.dir, 1)
+                             self.shape.center, self.shape.radius,
+                             self.dir, 1 + collided * 4 + has_collided_before)

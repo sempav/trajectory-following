@@ -64,6 +64,8 @@ class Circle(object):
             return self.intersect_ray(obj)
         elif isinstance(obj, Circle):
             return self.intersect_circle(obj)
+        elif isinstance(obj, MockShape):
+            return obj.intersect(self)
         else:
             return obj.intersect_circle(self)
 
@@ -119,6 +121,8 @@ class Segment(object):
             return self.intersect_ray(obj)
         elif isinstance(obj, Circle):
             return self.intersect_circle(obj)
+        elif isinstance(obj, MockShape):
+            return obj.intersect(self)
         else:
             raise ValueError("Segment.intersect: argument must be either Ray or Circle")
 
@@ -153,6 +157,8 @@ class Polygon(object):
             return self.intersect_ray(obj)
         elif isinstance(obj, Circle):
             return self.intersect_circle(obj)
+        elif isinstance(obj, MockShape):
+            return obj.intersect(self)
         else:
             raise ValueError("Polygon.intersect: argument must be either Ray or Circle")
 
@@ -160,3 +166,20 @@ class Polygon(object):
     def draw(self, screen, field, color):
         for e in self.edges:
             e.draw(screen, field, color)
+
+
+class MockShape(object):
+    def __init__(self):
+        pass
+
+
+    def intersect_ray(self, ray):
+        return None
+
+
+    def intersect_circle(self, c):
+        return None
+
+
+    def intersect(self, obj):
+        return None
