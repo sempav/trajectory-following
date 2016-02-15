@@ -49,8 +49,9 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
     if interactive:
         pos_fun=None
         start_pos = DEFAULT_START_POS
-        start_dir = Vector(1.0, 0.0)
-        eng.bots.append(Bot(models.MockModel(pos=start_pos, dir=start_dir, vel=0.0, pos_fun=pos_fun),
+        start_dir = Vector(0.0, 1.0)
+        eng.bots.append(Bot(models.MockModel(pos=start_pos, dir=start_dir, vel=0.0,
+                                             pos_fun=pos_fun, collidable=True),
                             behavior=behaviors.Leader()))
     else:
         pos_fun=make_lissajous(15.0, 4, 0.5, 1, 3)
@@ -62,8 +63,10 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
         eng.bots[0].real.pos = start_pos
         eng.bots[0].real.dir = start_dir
 
+    displacement = -start_dir
     for i in xrange(NUM_FOLLOWERS):
-        eng.bots.append(Bot(model(pos=start_pos, dir=start_dir, vel=0.0),
+        eng.bots.append(Bot(model(pos=start_pos + (i + 1) * displacement,
+                                  dir=start_dir, vel=0.0),
                         behavior=behaviors.Follower(g=30, zeta=0.9,
                                                     leader=eng.bots[i],
                                                     trajectory_delay=1.0,

@@ -1,6 +1,6 @@
 from engine.bot import BOT_VEL_CAP, BOT_ACCEL_CAP, BOT_RADIUS
 from engine.graphics import draw_directed_circle, BOT_COLOR
-from engine.shapes import MockShape
+from engine.shapes import MockShape, Circle
 from engine.vector import Point, normalize, length
 from math import pi, copysign, sin, cos
 
@@ -9,7 +9,8 @@ class MockModel(object):
                        pos_fun=None,
                        max_vel=BOT_VEL_CAP,
                        max_accel=BOT_ACCEL_CAP,
-                       radius=BOT_RADIUS):
+                       radius=BOT_RADIUS,
+                       collidable=False):
         self.pos = Point(*pos)
         self.dir = normalize(dir)
         self.vel = vel
@@ -20,7 +21,12 @@ class MockModel(object):
         self.max_rot_vel = 2 * max_vel / self.width
         self.time = 0
         self.pos_fun = pos_fun
-        self.shape = MockShape()
+        if collidable:
+            self.shape = Circle(self.pos, self.radius)
+        else:
+            self.shape = MockShape()
+            # avoid AttributeErrors in position update code
+            self.shape.center = self.pos
 
 
     def update_vel(self, delta_time, desired_vel):
@@ -49,6 +55,7 @@ class MockModel(object):
             if self.vel < 0:
                 self.vel = 0
             self.pos += self.dir * self.vel * delta_time
+        self.shape.center = self.pos
 
 
     def draw(self, screen, field, collided, has_collided_before):
