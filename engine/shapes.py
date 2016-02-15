@@ -141,6 +141,13 @@ class Polygon(object):
         return first_intersection(ray, self.edges)
 
 
+    def intersect_circle(self, c):
+        for e in self.edges:
+            if e.intersect_circle(c) is not None:
+                return True
+        return None
+
+
     def intersect(self, obj):
         if isinstance(obj, Ray):
             return self.intersect_ray(obj)

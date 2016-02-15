@@ -206,3 +206,34 @@ class PolygonTestCase(unittest.TestCase):
 
         p = Ray(Point(2.0, 0.5), Vector(1.0, 0.1)).intersect(s)
         self.assertIsNone(p)
+
+
+    def testNoCircleIntersection(self):
+        s = Polygon([Point(-1.0, -1.0), Point(1.0, -1.0),
+                     Point(1.0, 1.0),   Point(-1.0, 1.0)])
+        f = Circle(Point(0.0, 0.0), 0.5).intersect(s)
+        self.assertIsNone(f)
+        f = Circle(Point(3.0, 3.0), 1.0).intersect(s)
+        self.assertIsNone(f)
+
+
+    def testOneCircleIntersection(self):
+        s = Polygon([Point(-1.0, -1.0), Point(1.0, -1.0),
+                     Point(1.0, 1.0),   Point(-1.0, 1.0)])
+        f = Circle(Point(2.0, 0.0), 1.0).intersect(s)
+        self.assertIsNotNone(f)
+        f = Circle(Point(2.0, 2.0), 2**0.5).intersect(s)
+        self.assertIsNotNone(f)
+
+
+    def testMultipleCircleIntersections(self):
+        s = Polygon([Point(-1.0, -1.0), Point(1.0, -1.0),
+                     Point(1.0, 1.0),   Point(-1.0, 1.0)])
+        f = Circle(Point(0.0, 0.0), 1.0).intersect(s)
+        self.assertIsNotNone(f)
+        f = Circle(Point(0.0, 0.0), 2**0.5).intersect(s)
+        self.assertIsNotNone(f)
+        f = Circle(Point(1.0, 0.0), 0.2).intersect(s)
+        self.assertIsNotNone(f)
+        f = Circle(Point(2.0, 2.0), 3.0).intersect(s)
+        self.assertIsNotNone(f)

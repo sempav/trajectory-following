@@ -19,8 +19,8 @@ class Obstacle(object):
         self.shape.draw(screen, field, OBSTACLE_COLOR)
 
 
-    def intersect(self, ray):
-        return self.shape.intersect(ray)
+    def intersect(self, obj):
+        return self.shape.intersect(obj)
 
 
 def create_obstacle_circle(center, radius):
