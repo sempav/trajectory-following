@@ -84,14 +84,13 @@ class Engine(object):
                             collided_set.add(other)
                             collided_flag = True
                             break
-                if collided_flag:
-                    continue
-            # check for collisions with obstacles
-            for obstacle in self.obstacles:
-                if obstacle.intersect(bot.real.shape) is not None:
-                    collided_set.add(bot)
-                    collided_flag = True
-                    break
+            if not collided_flag:
+                # check for collisions with obstacles
+                for obstacle in self.obstacles:
+                    if obstacle.intersect(bot.real.shape) is not None:
+                        collided_set.add(bot)
+                        collided_flag = True
+                        break
             bot.collided = collided_flag
             bot.has_collided_before = bot.has_collided_before or collided_flag
         return collided_set
