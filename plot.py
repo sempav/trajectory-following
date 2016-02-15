@@ -22,7 +22,7 @@ def main():
 
     info = read_info(argv[1])
     num_bots = info.header['num_bots']
-    for bot in info.bots.values():
+    for bot in sorted(info.bots.values()):
         print "Plotting", str(bot.header['id']) + "..."
         plot(bot.header, bot.data, output_prefix + '_' + bot.header["id"] + ".png")
 
