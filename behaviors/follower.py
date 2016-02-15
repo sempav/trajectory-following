@@ -165,67 +165,89 @@ class Follower(BehaviorBase):
                                                    theta=orig_leader_theta))
 
 
-    def calc_desired_velocity(self, bots, obstacles, targets, engine):
-        # update trajectory
-        if engine.time - self.last_update_time > self.update_interval:
-            self.store_leaders_state(engine, obstacles)
+    def polyfit_trajectory(self, pos_data, t):
+        x_pos = np.array([el.pos.x for el in pos_data])
+        y_pos = np.array([el.pos.y for el in pos_data])
+        times = np.array([el.time   for el in pos_data])
 
-        t = engine.time - self.trajectory_delay
-        arr = get_interval(self.leader_positions, t, SAMPLE_COUNT)
-        self.traj_interval = arr
-        if len(arr) == 0:
-            return Instr(0.0, 0.0)
-        # reduce random movements at the start
-        if self.leader_is_visible and length(self.pos - self.leader_noisy_pos) < MIN_DISTANCE_TO_LEADER:
-            return Instr(0.0, 0.0)
-
-        x_pos = np.array([el.pos.x for el in arr])
-        y_pos = np.array([el.pos.y for el in arr])
-        times = np.array([el.time   for el in arr])
+        # needed for trajectory rendering
+        self.t_st = times[0]
+        self.t_fn = max(times[-1], t)
 
         # calculate quadratic approximation of the reference trajectory
         x_poly = np.polyfit(times, x_pos, deg=2)
         y_poly = np.polyfit(times, y_pos, deg=2)
         known = Trajectory.from_poly(x_poly, y_poly)
-        self.t_st = times[0]
-        self.t_fn = max(times[-1], t)
+        return known, x_pos[-1], y_pos[-1], times[-1]
 
+
+    def extend_trajectory(self, known, last_x, last_y, last_t):
         # now adding a circle to the end of known trajectory
         # k is signed curvature of the trajectry at t_fn
         try:
-            k = known.curvature(times[-1])
-        except ValueError:
-            k = 0.0
+            k = known.curvature(last_t)
+        except (ValueError, ZeroDivisionError):
+            k = MIN_CIRCLE_CURVATURE
         if abs(k) < MIN_CIRCLE_CURVATURE:
             k = copysign(MIN_CIRCLE_CURVATURE, k)
         if DISABLE_CIRCLES:
-            self.trajectory = known
+            return known
         else:
             radius = abs(1.0/k)
             # trajectory direction at time t_fn
             try:
-                d = normalize(Vector(known.dx(times[-1]), known.dy(times[-1])))
+                d = normalize(Vector(known.dx(last_t), known.dy(last_t)))
             except ValueError:
                 d = self.real_dir
 
             r = Vector(-d.y, d.x) / k
-            center = Point(x_pos[-1], y_pos[-1]) + r
+            center = Point(last_x, last_y) + r
             phase = atan2(-r.y, -r.x)
-            freq = known.dx(times[-1]) / r.y
-            self.x_approx = lambda time: known.x(time) if time < times[-1] else \
-                                         center.x + radius * cos(freq * (time - times[-1]) + phase)
-            self.y_approx = lambda time: known.y(time) if time < times[-1] else \
-                                         center.y + radius * sin(freq * (time - times[-1]) + phase)
-            dx = lambda time: known.dx(time) if time < times[-1] else \
-                              -radius * freq * sin(freq * (time - times[-1]) + phase)
-            dy = lambda time: known.dy(time) if time < times[-1] else \
-                              radius * freq * cos(freq * (time - times[-1]) + phase)
-            ddx = lambda time: 2 * x_poly[0] if time < times[-1] else \
-                              -radius * freq * freq * cos(freq * (time - times[-1]) + phase)
-            ddy = lambda time: 2 * y_poly[0] if time < times[-1] else \
-                              -radius * freq * freq * sin(freq * (time - times[-1]) + phase)
-            self.trajectory = Trajectory(x=self.x_approx, y=self.y_approx,
-                                         dx=dx, dy=dy, ddx=ddx, ddy=ddy)
+            freq = known.dx(last_t) / r.y
+            self.x_approx = lambda time: known.x(time) if time < last_t else \
+                                         center.x + radius * cos(freq * (time - last_t) + phase)
+            self.y_approx = lambda time: known.y(time) if time < last_t else \
+                                         center.y + radius * sin(freq * (time - last_t) + phase)
+            dx = lambda time: known.dx(time) if time < last_t else \
+                              -radius * freq * sin(freq * (time - last_t) + phase)
+            dy = lambda time: known.dy(time) if time < last_t else \
+                              radius * freq * cos(freq * (time - last_t) + phase)
+            ddx = lambda time: known.ddx(time) if time < last_t else \
+                              -radius * freq * freq * cos(freq * (time - last_t) + phase)
+            ddy = lambda time: known.ddy(time) if time < last_t else \
+                              -radius * freq * freq * sin(freq * (time - last_t) + phase)
+            return Trajectory(x=self.x_approx, y=self.y_approx,
+                              dx=dx, dy=dy, ddx=ddx, ddy=ddy)
+
+
+
+    def generate_trajectory(self, leader_positions, t):
+        arr = get_interval(self.leader_positions, t, SAMPLE_COUNT)
+        self.traj_interval = arr
+        if len(arr) == 0:
+            return None
+        known, last_x, last_y, last_t = self.polyfit_trajectory(arr, t)
+        return self.extend_trajectory(known, last_x, last_y, last_t)
+
+
+    def calc_desired_velocity(self, bots, obstacles, targets, engine):
+        # update trajectory
+        if engine.time - self.last_update_time > self.update_interval:
+            self.store_leaders_state(engine, obstacles)
+
+        # reduce random movements at the start
+        if self.leader_is_visible and length(self.pos - self.leader_noisy_pos) < MIN_DISTANCE_TO_LEADER:
+            return Instr(0.0, 0.0)
+
+        t = engine.time - self.trajectory_delay
+        self.trajectory = self.generate_trajectory(self.leader_positions, t)
+        if self.trajectory is None:
+            return Instr(0.0, 0.0)
+
+        dx = self.trajectory.dx
+        dy = self.trajectory.dy
+        ddx = self.trajectory.ddx
+        ddy = self.trajectory.ddy
 
         # calculate the feed-forward velocities
         v_fun = lambda time: sqrt(dx(time)**2 + dy(time)**2)
@@ -369,7 +391,7 @@ class Follower(BehaviorBase):
             if DRAW_REFERENCE_POS:
                 draw_circle(screen, field, TARGET_POINT_COLOR, self.target_point, 0.2)
 
-            if DRAW_APPROX_TRAJECTORY:
+            if DRAW_APPROX_TRAJECTORY and self.trajectory is not None:
                 #if len(self.traj_interval) > 1:
                 #    p2 = Point(self.traj_interval[0].pos.x,
                 #               self.traj_interval[0].pos.y)
