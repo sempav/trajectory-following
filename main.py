@@ -159,6 +159,7 @@ def main(args):
                 if reset_needed:
                     reset(eng, obstacle_map=cur_obstacle_map, model=cur_model,
                           interactive=args.interactive, log_data=args.log_data)
+                    collision_has_occurred = False
 
         if pygame.K_LEFT in pressed_keys:
             try:
