@@ -61,7 +61,7 @@ def draw_arc(screen, field, color, center, radius,
 def draw_directed_circle(screen, field, color, center, radius, dir, thickness=2):
     draw_circle(screen, field, color,
                        center,
-                       radius, 1)
+                       radius, thickness)
     top_angle = 40.0 * pi / 180.0
     x = radius * sin(top_angle)
     y = radius * cos(top_angle)
@@ -69,9 +69,9 @@ def draw_directed_circle(screen, field, color, center, radius, dir, thickness=2)
     pa = center + rotate(Vector(-x, -y), ang)
     pb = center + rotate(Vector( x, -y), ang)
     pc = center + rotate(Vector(0.0, radius), ang)
-    draw_line(screen, field, color, pa, pb, 1)
-    draw_line(screen, field, color, pa, pc, 1)
-    draw_line(screen, field, color, pb, pc, 1)
+    draw_line(screen, field, color, pa, pb, thickness)
+    draw_line(screen, field, color, pa, pc, thickness)
+    draw_line(screen, field, color, pb, pc, thickness)
 
 
 class Graphics(object):
