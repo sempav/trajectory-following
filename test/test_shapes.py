@@ -4,7 +4,7 @@ from engine.shapes import Ray, Circle, Segment, Polygon
 
 
 class CircleTestCase(unittest.TestCase):
-    def testTwoIntersections(self):
+    def testTwoRayIntersections(self):
         c = Circle(Point(0.0, 0.0), 1.0)
 
         p = Ray(Point(-2.0, 0.0), Vector(1.0, 0.0)).intersect(c)
@@ -19,7 +19,7 @@ class CircleTestCase(unittest.TestCase):
         self.assertEqual(p, Point(10.0 - 2 * 2**0.5, 10.0 - 2 * 2**0.5))
 
 
-    def testOneIntersectionWithOrigInsideCircle(self):
+    def testOneRayIntersectionWithOrigInsideCircle(self):
         c = Circle(Point(0.0, 0.0), 1.0)
 
         p = Ray(Point(0.0, 0.0), Vector(1.0, 0.0)).intersect(c)
@@ -29,7 +29,7 @@ class CircleTestCase(unittest.TestCase):
         self.assertEqual(p, Point(0.5 * 2**0.5, 0.5 * 2**0.5))
 
 
-    def testOneIntersectionWithIncidentRay(self):
+    def testOneRayIntersectionWithIncidentRay(self):
         c = Circle(Point(0.0, 0.0), 1.0)
 
         p = Ray(Point(-10.0, 1.0), Vector(1.0, 0.0)).intersect(c)
@@ -39,7 +39,7 @@ class CircleTestCase(unittest.TestCase):
         self.assertEqual(p, Point(-0.5 * 2**0.5, 0.5 * 2**0.5))
 
 
-    def testNoIntersection(self):
+    def testNoRayIntersection(self):
         c = Circle(Point(10.0, 10.0), 1.0)
 
         p = Ray(Point(0.0, 0.0), Vector(1.0, 0.0)).intersect(c)
@@ -49,8 +49,36 @@ class CircleTestCase(unittest.TestCase):
         self.assertIsNone(p)
 
 
+    def testOneCircleIntersection(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Circle(Point(2.0, 0.0), 1.0).intersect(c)
+        self.assertTrue(f)
+        f = Circle(Point(2**0.5, 2**0.5), 1.0).intersect(c)
+        self.assertTrue(f)
+
+
+    def testTwoCircleIntersections(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Circle(Point(1.0, 0.0), 1.0).intersect(c)
+        self.assertTrue(f)
+        f = Circle(Point(1.0, 1.0), 1.0).intersect(c)
+        self.assertTrue(f)
+
+
+    def testSameCircleIntersection(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Circle(Point(0.0, 0.0), 1.0).intersect(c)
+        self.assertTrue(f)
+
+
+    def testNoCircleIntersection(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Circle(Point(100.0, 0.0), 1.0).intersect(c)
+        self.assertIsNone(f)
+
+
 class SegmentTestCase(unittest.TestCase):
-    def testMiddleIntersection(self):
+    def testMiddleRayIntersection(self):
         s = Segment(Point(-1.0, 0.0), Point(1.0, 0.0))
 
         p = Ray(Point(-1.0, -1.0), Vector(1.0, 1.0)).intersect(s)
@@ -60,7 +88,7 @@ class SegmentTestCase(unittest.TestCase):
         self.assertEqual(p, Point(0.75, 0.0))
 
 
-    def testBoundsIntersection(self):
+    def testBoundsRayIntersection(self):
         s = Segment(Point(-1.0, 0.0), Point(1.0, 0.0))
 
         p = Ray(Point(-1.0, -1.0), Vector(0.0, 1.0)).intersect(s)
@@ -69,7 +97,7 @@ class SegmentTestCase(unittest.TestCase):
         p = Ray(Point(-2.0, -2.0), Vector(3.0, 2.0)).intersect(s)
         self.assertEqual(p, Point(1.0, 0.0))
 
-    def testNoIntersection(self):
+    def testNoRayIntersection(self):
         s = Segment(Point(-1.0, 0.0), Point(1.0, 0.0))
 
         p = Ray(Point(-1.0, -1.0), Vector(1.0, 0.0)).intersect(s)
@@ -90,8 +118,55 @@ class SegmentTestCase(unittest.TestCase):
         self.assertIsNone(p)
 
 
+    def testOneCircleIntersectionPoke(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Segment(Point(-2.0, 0.0), Point(0.0, 0.0)).intersect(c)
+        self.assertIsNotNone(f)
+        f = Segment(Point(-2.0, 0.1), Point(-0.2, 0.5)).intersect(c)
+        self.assertIsNotNone(f)
+
+
+    def testOneCircleIntersectionExitWound(self):
+        # same as previous test, just with differently directed segments
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Segment(Point(0.0, 0.0), Point(-2.0, 0.0)).intersect(c)
+        self.assertIsNotNone(f)
+        f = Segment(Point(-0.2, 0.5), Point(-2.0, 0.1)).intersect(c)
+        self.assertIsNotNone(f)
+
+
+    def testNoCircleIntersectionParallel(self):
+        c = Circle(Point(0.0, 2.0), 1.0)
+        f = Segment(Point(-1.0, 0.0), Point(1.0, 0.0)).intersect(c)
+        self.assertIsNone(f)
+
+
+    def testNoCircleIntersectionFallShort(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Segment(Point(-4.0, 0.0), Point(-3.0, 0.0)).intersect(c)
+        self.assertIsNone(f)
+        f = Segment(Point(-4.0, 1.0), Point(-3.0, -0.2)).intersect(c)
+        self.assertIsNone(f)
+
+
+    def testNoCircleIntersectionPast(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Segment(Point(-3.0, 0.0), Point(-4.0, 0.0)).intersect(c)
+        self.assertIsNone(f)
+        f = Segment(Point(3.0, 3.5), Point(4.1, 4.3)).intersect(c)
+        self.assertIsNone(f)
+
+
+    def testNoCircleIntersectionCompletelyInside(self):
+        c = Circle(Point(0.0, 0.0), 1.0)
+        f = Segment(Point(-0.5, 0.0), Point(0.5, 0.0)).intersect(c)
+        self.assertIsNone(f)
+        f = Segment(Point(-0.5, 0.5), Point(0.5, -0.5)).intersect(c)
+        self.assertIsNone(f)
+
+
 class PolygonTestCase(unittest.TestCase):
-    def testOneIntersection(self):
+    def testOneRayIntersection(self):
         s = Polygon([Point(-1.0, -1.0), Point(1.0, -1.0),
                      Point(1.0, 1.0),   Point(-1.0, 1.0)])
 
@@ -102,7 +177,7 @@ class PolygonTestCase(unittest.TestCase):
         self.assertEqual(p, Point(1.0, 1.0))
 
 
-    def testMultipleIntersections(self):
+    def testMultipleRayIntersections(self):
         s = Polygon([Point(-1.0, -1.0), Point(1.0, -1.0),
                      Point(1.0, 1.0),   Point(-1.0, 1.0)])
 
@@ -116,7 +191,7 @@ class PolygonTestCase(unittest.TestCase):
         self.assertEqual(p, Point(-1.0, 0.5))
 
 
-    def testNoIntersection(self):
+    def testNoRayIntersection(self):
         s = Polygon([Point(-1.0, -1.0), Point(1.0, -1.0),
                      Point(1.0, 1.0),   Point(-1.0, 1.0)])
 

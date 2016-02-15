@@ -1,5 +1,5 @@
 from graphics import draw_circle, draw_line
-from vector import normalize, dot, cross, length, Vector
+from vector import normalize, dot, cross, length, dist, Vector
 from math import sqrt
 
 class Ray(object):
@@ -10,7 +10,7 @@ class Ray(object):
 
     # returns the intersection that is closest to origin
     def intersect(self, shape):
-        return shape.intersect(self)
+        return shape.intersect_ray(self)
 
 
 # returns None if the ray doesn't intersect with any objects
@@ -33,7 +33,7 @@ class Circle(object):
 
 
     # returns the intersection that is closest to origin
-    def intersect(self, ray):
+    def intersect_ray(self, ray):
         oc = self.center - ray.orig
         # let P be projection of C on the line
         # then l = |OP|, h = |CP|
@@ -52,6 +52,22 @@ class Circle(object):
             return ray.orig + t * ray.dir
 
 
+    def intersect_circle(self, c):
+        if dist(self.center, c.center) <= self.radius + c.radius + 1e-5:
+            return True
+        else:
+            return None
+
+
+    def intersect(self, obj):
+        if isinstance(obj, Ray):
+            return self.intersect_ray(obj)
+        elif isinstance(obj, Circle):
+            return self.intersect_circle(obj)
+        else:
+            return obj.intersect_circle(self)
+
+
     def draw(self, screen, field, color):
         draw_circle(screen, field, color, self.center, self.radius)
 
@@ -63,7 +79,7 @@ class Segment(object):
 
 
     # returns the intersection that is closest to origin
-    def intersect(self, ray):
+    def intersect_ray(self, ray):
         v1 = ray.orig - self.a
         v2 = self.b - self.a
         v3 = Vector(-ray.dir.y, ray.dir.x)
@@ -75,6 +91,36 @@ class Segment(object):
             return self.a + v2 * ts
         else:
             return None
+
+
+    def intersect_circle(self, c):
+        d = self.b - self.a
+        f = self.a - c.center
+        a = dot(d, d)
+        b = 2 * dot(f, d)
+        c = dot(f, f) - c.radius * c.radius
+        discriminant = b * b - 4 * a * c
+        if discriminant < 0:
+            # no intersection
+            return None
+        else:
+            discriminant = sqrt(discriminant)
+            t1 = (-b - discriminant) / (2.0 * a)
+            t2 = (-b + discriminant) / (2.0 * a)
+            if t1 >= 0 and t1 <= 1:
+                return True
+            if t2 >= 0 and t2 <= 1:
+                return True
+            return None
+
+
+    def intersect(self, obj):
+        if isinstance(obj, Ray):
+            return self.intersect_ray(obj)
+        elif isinstance(obj, Circle):
+            return self.intersect_circle(obj)
+        else:
+            raise ValueError("Segment.intersect: argument must be either Ray or Circle")
 
 
     def draw(self, screen, field, color):
@@ -91,8 +137,17 @@ class Polygon(object):
 
 
     # returns the intersection that is closest to origin
-    def intersect(self, ray):
+    def intersect_ray(self, ray):
         return first_intersection(ray, self.edges)
+
+
+    def intersect(self, obj):
+        if isinstance(obj, Ray):
+            return self.intersect_ray(obj)
+        elif isinstance(obj, Circle):
+            return self.intersect_circle(obj)
+        else:
+            raise ValueError("Polygon.intersect: argument must be either Ray or Circle")
 
 
     def draw(self, screen, field, color):
