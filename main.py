@@ -23,7 +23,7 @@ FRAMES_PER_BOT_UPDATE = 1
 NUM_FOLLOWERS = 1
 
 
-def create_dump_file():
+def create_log_file():
     fname = "data"
     fnumber = 1
     # find first number X such that file "dataX.txt" doesn't exist
@@ -32,12 +32,12 @@ def create_dump_file():
     return open(fname + str(fnumber) + ".txt", "w")
 
 
-def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, dump_data=False):
-    dump_file = None
-    if dump_data:
-        dump_file = create_dump_file()
-        dump_dict = {"num_bots": NUM_FOLLOWERS}
-        print >> dump_file, dump_dict
+def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, log_data=False):
+    log_file = None
+    if log_data:
+        log_file = create_log_file()
+        log_dict = {"num_bots": NUM_FOLLOWERS}
+        print >> log_file, log_dict
 
     eng.bots = []
     eng.obstacles = []
@@ -67,7 +67,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
                                                     orig_leader=eng.bots[0],
                                                     orig_leader_delay=1.0 * (i + 1),
                                                     noise_sigma=0.0,
-                                                    dump_file=dump_file,
+                                                    log_file=log_file,
                                                     id="%02d" % (i + 1))))
 
     eng.obstacles = maps[obstacle_map][:]
@@ -105,7 +105,7 @@ def main(args):
     cur_movement = engine.Movement.Speed
     cur_model = models.DifferentialModel
     reset(eng, obstacle_map=cur_obstacle_map, model=cur_model,
-          interactive=args.interactive, dump_data=args.dump_data)
+          interactive=args.interactive, log_data=args.log_data)
 
     finished = False
     clock = pygame.time.Clock()
@@ -153,7 +153,7 @@ def main(args):
 
                 if reset_needed:
                     reset(eng, obstacle_map=cur_obstacle_map, model=cur_model,
-                          interactive=args.interactive, dump_data=args.dump_data)
+                          interactive=args.interactive, log_data=args.log_data)
 
         if pygame.K_LEFT in pressed_keys:
             try:
@@ -201,7 +201,7 @@ def main(args):
 def parse_arguments():
     parser = argparse.ArgumentParser(description='')
 
-    parser.add_argument('--dump-data', '--dump', action='store_true', default=False)
+    parser.add_argument('--log-data', '--log', action='store_true', default=False)
     parser.add_argument('--interactive', '--int', action='store_true', default=False)
 
     return parser.parse_args()

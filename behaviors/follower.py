@@ -61,7 +61,7 @@ class Follower(BehaviorBase):
     def __init__(self, g, zeta,
                  leader, trajectory_delay=2.0,
                  orig_leader=None, orig_leader_delay=None,
-                 noise_sigma=0.0, dump_file=None,
+                 noise_sigma=0.0, log_file=None,
                  visibility_fov=DEFAULT_FOV, visibility_radius=None,
                  id=None):
 
@@ -102,7 +102,7 @@ class Follower(BehaviorBase):
 
         self.noise_sigma = noise_sigma
 
-        self.dump_file = dump_file
+        self.log_file = log_file
 
         self.visibility_fov = visibility_fov
         if visibility_radius is None:
@@ -116,14 +116,14 @@ class Follower(BehaviorBase):
         self.orig_leader_delay = orig_leader_delay
 
 
-        if self.dump_file is not None:
-            dump_dict = {"id": self.id,
+        if self.log_file is not None:
+            log_dict = {"id": self.id,
                          "g": self.g,
                          "zeta": self.zeta,
                          "noise_sigma": self.noise_sigma,
                          "reference_points_cnt": SAMPLE_COUNT,
                          "trajectory_delay": trajectory_delay}
-            print >> self.dump_file, dump_dict
+            print >> self.log_file, log_dict
 
 
     def point_in_fov(self, p):
@@ -321,8 +321,8 @@ class Follower(BehaviorBase):
                 real_delta = State(x=real_delta.x, y=real_delta.y, theta=real_delta.theta - 2 * pi)
             real_e = real_delta
 
-        if self.dump_file is not None:
-            dump_dict = {"id": self.id,
+        if self.log_file is not None:
+            log_dict = {"id": self.id,
                          "time": engine.time,
                          "delta_time": engine.time_since_last_bot_update,
                          "v": v,
@@ -335,7 +335,7 @@ class Follower(BehaviorBase):
                          "real_e_x": real_e.x,
                          "real_e_y": real_e.y,
                          "real_e_theta": real_e.theta}
-            print >> self.dump_file, dump_dict
+            print >> self.log_file, log_dict
 
         return Instr(v,  omega)
 
