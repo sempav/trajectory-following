@@ -58,7 +58,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
     else:
         pos_fun=make_lissajous(15.0, 4, 0.5, 1, 3)
         #pos_fun = make_lissajous(35.0, 4, 3, 1, 4)
-        eng.bots.append(Bot(models.MockModel(pos=(0.0, 0.0), dir=(1.0, 0.0), vel=0.0, pos_fun=pos_fun),
+        eng.bots.append(Bot(models.MockModel(pos=(0.0, 0.0), dir=(1.0, 0.0), vel=0.0, pos_fun=pos_fun, collidable=True),
                             behavior=behaviors.Leader()))
         start_pos = eng.bots[0].real.pos_fun(0.0)
         start_dir = normalize(eng.bots[0].real.vel_fun(0.0, 0.01))
