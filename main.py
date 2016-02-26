@@ -25,6 +25,8 @@ NUM_FOLLOWERS = 1
 
 DEFAULT_START_POS = Point(4.0, 0.0)
 
+NOISE_SIGMA = 0.01
+
 
 def create_log_file():
     fname = "data"
@@ -72,7 +74,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
                                                     trajectory_delay=1.0,
                                                     orig_leader=eng.bots[0],
                                                     orig_leader_delay=1.0 * (i + 1),
-                                                    noise_sigma=0.0,
+                                                    noise_sigma=NOISE_SIGMA,
                                                     log_file=log_file,
                                                     id="%02d" % (i + 1))))
 
