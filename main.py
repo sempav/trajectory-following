@@ -12,7 +12,7 @@ import models
 from engine.vector import Point, Vector, normalize
 from engine.graphics import Graphics
 from engine.field import Field
-from engine.bot import Bot
+from engine.bot import Bot, BOT_RADIUS
 from obstacle_maps import maps
 from mock_trajectories import *
 
@@ -63,7 +63,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
         eng.bots[0].real.pos = start_pos
         eng.bots[0].real.dir = start_dir
 
-    displacement = -start_dir
+    displacement = -start_dir * 2.1 * BOT_RADIUS
     for i in xrange(NUM_FOLLOWERS):
         eng.bots.append(Bot(model(pos=start_pos + (i + 1) * displacement,
                                   dir=start_dir, vel=0.0),
