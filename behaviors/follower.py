@@ -92,6 +92,8 @@ class Follower(BehaviorBase):
         # corresponding position of the leader
         self.leader_positions = RingBuffer(RECORDED_POSITIONS_CNT)
 
+        self.leader_is_visible = False
+
         # orig_leader_states stores leader's precise state;
         # used to export "real" errors (as opposed to calculated
         # w.r.t. the approximation curve)
