@@ -21,10 +21,11 @@ from trajectory import Trajectory
 from collections import namedtuple
 from math import sin, cos, pi, atan2, sqrt, copysign, isnan, log
 from random import gauss
+import sys
 import numpy as np
 
 
-RECORDED_POSITIONS_CNT = 100
+POSITIONS_BUFFER_SIZE = 150
 SAMPLE_COUNT = 40
 MIN_DISTANCE_TO_LEADER = 2 * BOT_RADIUS
 DISABLE_CIRCLES = False
@@ -60,6 +61,7 @@ def lerp_angles(a, b, coeff):
 class Follower(BehaviorBase):
     def __init__(self, g, zeta,
                  leader, trajectory_delay=2.0,
+                 update_delta_t=0.01,
                  orig_leader=None, orig_leader_delay=None,
                  noise_sigma=0.0, log_file=None,
                  visibility_fov=DEFAULT_FOV, visibility_radius=None,
@@ -87,10 +89,10 @@ class Follower(BehaviorBase):
         assert 0 < zeta < 1, "Follower: zeta parameter must be in (0, 1)"
         self.zeta = zeta
 
-        # leader_positions stores RECORDED_POSITIONS_CNT tuples;
+        # leader_positions stores POSITIONS_BUFFER_SIZE tuples;
         # tuple's first field is time, second is the
         # corresponding position of the leader
-        self.leader_positions = RingBuffer(RECORDED_POSITIONS_CNT)
+        self.leader_positions = RingBuffer(POSITIONS_BUFFER_SIZE)
 
         self.leader_is_visible = False
 
@@ -99,7 +101,12 @@ class Follower(BehaviorBase):
         # w.r.t. the approximation curve)
         self.orig_leader_states = []
 
-        self.update_interval = trajectory_delay / (RECORDED_POSITIONS_CNT - SAMPLE_COUNT // 2)
+        self.update_delta_t = update_delta_t
+        needed_buffer_size = SAMPLE_COUNT // 2 + self.trajectory_delay / self.update_delta_t
+        if needed_buffer_size > POSITIONS_BUFFER_SIZE:
+            sys.stderr.write("leader_positions buffer is too small for update_delta_t = {}".format(self.update_delta_t) +
+                             " (current = {}, required = {})".format(POSITIONS_BUFFER_SIZE, needed_buffer_size))
+            raise RuntimeError, "leader_positions buffer is too small for update_delta_t = {}".format(self.update_delta_t)
         self.last_update_time = 0.0
 
         self.noise_sigma = noise_sigma
@@ -241,7 +248,7 @@ class Follower(BehaviorBase):
 
     def calc_desired_velocity(self, bots, obstacles, targets, engine):
         # update trajectory
-        if engine.time - self.last_update_time > self.update_interval:
+        if engine.time - self.last_update_time > self.update_delta_t:
             self.store_leaders_state(engine, obstacles)
 
         # reduce random movements at the start
@@ -351,7 +358,7 @@ class Follower(BehaviorBase):
 
     def draw(self, screen, field):
         if DISPLAYED_POINTS_COUNT > 0:
-            k = RECORDED_POSITIONS_CNT / DISPLAYED_POINTS_COUNT
+            k = POSITIONS_BUFFER_SIZE / DISPLAYED_POINTS_COUNT
             for index, (time, point) in enumerate(self.leader_positions):
                 if index % k == 0:
                     draw_circle(screen, field, TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
