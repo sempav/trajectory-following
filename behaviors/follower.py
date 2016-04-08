@@ -68,6 +68,24 @@ def lerp_angles(a, b, coeff):
     return a + coeff * (b - a)
 
 
+class LerpError(RuntimeError):
+    pass
+
+
+def lerp_precise_states(time, precise_leader_states):
+    orig_arr = get_interval(precise_leader_states, time, 3)
+    if len(orig_arr) < 2:
+        raise LerpError, "too few states available at given time"
+    a = orig_arr[-2]
+    b = orig_arr[-1]
+    # lerp nearest states to get orig_leader's state at moment t
+    coeff = (time - a.time) / (b.time - a.time)
+    leader_pos = lerp(a.pos, b.pos, coeff)
+    leader_theta = lerp_angles(a.theta, b.theta, coeff)
+    return State(x=leader_pos.x, y=leader_pos.y,
+                 theta=leader_theta)
+
+
 class Follower(BehaviorBase):
     def __init__(self, g, zeta,
                  leader, trajectory_delay=2.0,
@@ -106,10 +124,12 @@ class Follower(BehaviorBase):
 
         self.leader_is_visible = False
 
-        # orig_leader_states stores leader's precise state;
-        # used to export "real" errors (as opposed to calculated
+        # precise_orig_leader_states stores the first leader's precise state;
+        # used to calculate "real" errors (as opposed to calculations
         # w.r.t. the approximation curve)
-        self.orig_leader_states = []
+        self.precise_orig_leader_states = []
+        # precise_leader_states is used for the same purpose, but with the bot's own leader
+        self.precise_leader_states = []
 
         self.update_delta_t = update_delta_t
         needed_buffer_size = SAMPLE_COUNT // 2 + self.trajectory_delay / self.update_delta_t
@@ -179,9 +199,14 @@ class Follower(BehaviorBase):
 
         orig_leader_theta = atan2(self.orig_leader.real.dir.y,
                                   self.orig_leader.real.dir.x)
-        self.orig_leader_states.append(TimedState(time=engine.time,
+        self.precise_orig_leader_states.append(TimedState(time=engine.time,
                                                    pos=self.orig_leader.real.pos,
                                                    theta=orig_leader_theta))
+        leader_theta = atan2(self.leader.real.dir.y,
+                             self.leader.real.dir.x)
+        self.precise_leader_states.append(TimedState(time=engine.time,
+                                             pos=self.leader.real.pos,
+                                             theta=leader_theta))
 
 
     def polyfit_trajectory(self, pos_data, t):
@@ -324,24 +349,16 @@ class Follower(BehaviorBase):
         #v = v_ff
         #omega = omega_ff
 
-        orig_t = engine.time - self.orig_leader_delay
-        orig_arr = get_interval(self.orig_leader_states, orig_t, 3)
         real_e = State(0.0, 0.0, 0.0)
-        if len(orig_arr) >= 2:
-            a = orig_arr[-2]
-            b = orig_arr[-1]
-            # lerp nearest states to get orig_leader's state at moment t
-            coeff = (orig_t - a.time) / (b.time - a.time)
-            leader_pos = lerp(a.pos, b.pos, coeff)
-            leader_theta = lerp_angles(a.theta, b.theta, coeff)
-            self.orig_leader_pos = leader_pos
-            self.orig_leader_theta = leader_theta
-            real_delta = State(x=leader_pos.x - cur.x,
-                               y=leader_pos.y - cur.y,
-                               theta=(leader_theta - cur.theta) % (2 * pi))
-            if real_delta.theta > pi:
-                real_delta = State(x=real_delta.x, y=real_delta.y, theta=real_delta.theta - 2 * pi)
-            real_e = real_delta
+        try:
+            orig_t = engine.time - self.orig_leader_delay
+            orig_leader_state = lerp_precise_states(orig_t, self.precise_orig_leader_states)
+            real_e = State(x=orig_leader_state.x - cur.x,
+                               y=orig_leader_state.y - cur.y,
+                               theta=normalize_angle(orig_leader_state.theta - cur.theta))
+        except LerpError:
+            # not enough data is yet available to calculate error
+            pass
 
         if self.log_file is not None:
             log_dict = {"id": self.id,
