@@ -45,6 +45,15 @@ TimedState = namedtuple('TimedState', 'time, pos, theta')
 State = namedtuple('State', 'x, y, theta')
 
 
+def normalize_angle(a):
+    """
+    Returns the angle (a + 2 * k * pi) that lies in [-pi, pi]
+    """
+    res = a % (2 * pi)
+    if res > pi:
+        res -= 2 * pi
+    return res
+
 def lerp(a, b, coeff):
     return a + coeff * (b - a)
 
@@ -293,11 +302,7 @@ class Follower(BehaviorBase):
         # error in the global (fixed) reference frame
         delta = State(x=r.x - cur.x,
                       y=r.y - cur.y,
-                      theta=(r.theta - cur.theta) % (2 * pi))
-        if delta.theta > pi:
-            delta = State(x=delta.x,
-                          y=delta.y,
-                          theta=delta.theta - 2 * pi)
+                      theta=normalize_angle(r.theta - cur.theta))
 
         # translate error into the follower's reference frame
         e = State(x= cos(cur.theta) * delta.x + sin(cur.theta) * delta.y,
