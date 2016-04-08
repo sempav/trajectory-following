@@ -1,6 +1,6 @@
 import unittest
 from engine.vector import Vector, Point, geom_places, length, dist
-from engine.vector import normalize, dot, cross, angle, signed_angle
+from engine.vector import normalize, dot, cross, angle, signed_angle, NormalizationError
 from engine.vector import rotate
 
 class VectorTestCase(unittest.TestCase):
@@ -25,7 +25,7 @@ class VectorTestCase(unittest.TestCase):
                          Vector(0.5 * 2**0.5, 0.5 * 2**0.5))
         self.assertEqual(normalize(Vector(0.01, 0.0)),
                          Vector(1.0, 0.0))
-        with self.assertRaises(ValueError):
+        with self.assertRaises(NormalizationError):
             normalize(Vector(0.0, 0.0))
             normalize(Vector(1.0 - 7.0 * (1.0/7.0), 1.0 - 3.0 * (1.0/3.0)))
 

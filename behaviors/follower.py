@@ -1,6 +1,7 @@
 from base import BehaviorBase
 from engine.bot import BOT_RADIUS, BOT_VEL_CAP, BOT_ACCEL_CAP, Bot
-from engine.vector import Vector, Point, length, normalize, dist, rotate, cross, dot
+from engine.vector import Vector, Point, length, normalize, dist, rotate, cross, dot, \
+                          NormalizationError
 from engine.graphics import draw_circle, draw_line, draw_arc, \
                             draw_directed_circle, \
                             APPROX_TRAJECTORY_COLOR, \
@@ -148,7 +149,7 @@ class Follower(BehaviorBase):
             return False
         try:
             ray = Ray(self.pos, p - self.pos)
-        except ValueError:
+        except NormalizationError:
             ray = Ray(self.pos, Vector(1.0, 0.0))
         i = first_intersection(ray, obstacles)
         return (i is None) or (length(i - self.pos) > length(p - self.pos))
@@ -204,7 +205,7 @@ class Follower(BehaviorBase):
         # trajectory direction at time t_fn
         try:
             d = normalize(Vector(known.dx(last_t), known.dy(last_t)))
-        except ValueError:
+        except NormalizationError:
             d = self.real_dir
 
         r = Vector(-d.y, d.x) / k
