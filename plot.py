@@ -119,9 +119,9 @@ def plot(header, data, output_filename):
     fig.subplots_adjust(hspace=0.3, wspace=1.0)
 
     suptitle = plt.suptitle("id " + str(header['id']) + ", " + \
-         r"Noise: $\sigma=" + str(header['noise_sigma']) + '$ ' + \
-         ", Ref. points = " + str(header['reference_points_cnt']) + \
-         ", delay = " + str(header['trajectory_delay']), y=0.05)
+         r"noise: $\sigma = " + str(header['noise_sigma']) + '$ ' + \
+         ", ref. points = " + str(header['reference_points_cnt']) + \
+         ", delay = " + str(header['trajectory_delay']) + "s", y=0.05)
     artists.append(suptitle)
 
 

@@ -2,9 +2,8 @@
 
 
 import argparse
-import pygame
 import os
-from sys import argv
+import pygame
 
 import engine
 import behaviors
@@ -49,7 +48,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
     eng.targets = []
 
     if interactive:
-        pos_fun=None
+        pos_fun = None
         start_pos = DEFAULT_START_POS
         start_dir = Vector(0.0, 1.0)
         eng.bots.append(Bot(models.MockModel(pos=start_pos, dir=start_dir, vel=0.0,
@@ -69,15 +68,15 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
     for i in xrange(NUM_FOLLOWERS):
         eng.bots.append(Bot(model(pos=start_pos + (i + 1) * displacement,
                                   dir=start_dir, vel=0.0),
-                        behavior=behaviors.Follower(g=30, zeta=0.9,
-                                                    leader=eng.bots[i],
-                                                    trajectory_delay=1.0,
-                                                    update_delta_t=0.01,
-                                                    orig_leader=eng.bots[0],
-                                                    orig_leader_delay=1.0 * (i + 1),
-                                                    noise_sigma=NOISE_SIGMA,
-                                                    log_file=log_file,
-                                                    id="%02d" % (i + 1))))
+                            behavior=behaviors.Follower(g=30, zeta=0.9,
+                                                        leader=eng.bots[i],
+                                                        trajectory_delay=1.0,
+                                                        update_delta_t=0.01,
+                                                        orig_leader=eng.bots[0],
+                                                        orig_leader_delay=1.0 * (i + 1),
+                                                        noise_sigma=NOISE_SIGMA,
+                                                        log_file=log_file,
+                                                        id="%02d" % (i + 1))))
 
     eng.obstacles = maps[obstacle_map][:]
 
@@ -137,7 +136,8 @@ def main(args):
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pass
             elif event.type == pygame.KEYUP:
-                event.key in pressed_keys and pressed_keys.remove(event.key)
+                if event.key in pressed_keys:
+                    pressed_keys.remove(event.key)
             elif event.type == pygame.KEYDOWN:
                 recognized_key = False
                 reset_needed = False
