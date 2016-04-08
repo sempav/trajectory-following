@@ -360,6 +360,16 @@ class Follower(BehaviorBase):
             # not enough data is yet available to calculate error
             pass
 
+        try:
+            leader_t = engine.time - self.trajectory_delay
+            leader_state = lerp_precise_states(leader_t, self.precise_leader_states)
+            approx_e = State(x=leader_state.x - cur.x,
+                             y=leader_state.y - cur.y,
+                             theta=normalize_angle(leader_state.theta - cur.theta))
+        except LerpError:
+            # same as above
+            pass
+
         if self.log_file is not None:
             log_dict = {"id": self.id,
                          "time": engine.time,
@@ -373,7 +383,11 @@ class Follower(BehaviorBase):
                          "e_theta": e.theta,
                          "real_e_x": real_e.x,
                          "real_e_y": real_e.y,
-                         "real_e_theta": real_e.theta}
+                         "real_e_theta": real_e.theta,
+                         "approx_e_x": approx_e.x,
+                         "approx_e_y": approx_e.y,
+                         "approx_e_theta": approx_e.theta
+                        }
             print >> self.log_file, log_dict
 
         return Instr(v,  omega)
