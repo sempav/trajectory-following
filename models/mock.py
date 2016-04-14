@@ -38,7 +38,7 @@ class MockModel(object):
                 self.pos_fun(time - 1.0 * delta_time)) / (2.0 * delta_time)
 
 
-    def update_state(self, delta_time):
+    def update_state(self, delta_time, movement_sigma):
         if self.pos_fun is not None:
             self.time += delta_time
             self.pos = self.pos_fun(self.time)

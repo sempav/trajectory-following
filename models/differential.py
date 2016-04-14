@@ -1,6 +1,8 @@
+from random import gauss
+from math import pi, copysign
+
 from engine.bot import BOT_VEL_CAP, BOT_ACCEL_CAP, BOT_RADIUS
 from engine.vector import Point, Vector, length, normalize, rotate, signed_angle
-from math import pi, copysign
 from engine.graphics import draw_circle, draw_line, draw_directed_circle, BOT_COLOR
 from engine.shapes import Circle
 
@@ -67,7 +69,9 @@ class DifferentialModel(object):
             self.rvel *= self.max_vel / v
 
 
-    def update_state(self, delta_time):
+    def update_state(self, delta_time, movement_sigma):
+        self.lvel *= 1.0 + gauss(0.0, movement_sigma)
+        self.rvel *= 1.0 + gauss(0.0, movement_sigma)
         self.pos += delta_time * self.vel * self.dir
         self.dir = rotate(self.dir, delta_time * self.rot_vel)
         self.shape.center = self.pos

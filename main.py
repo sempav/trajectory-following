@@ -24,7 +24,8 @@ NUM_FOLLOWERS = 1
 
 DEFAULT_START_POS = Point(4.0, 0.0)
 
-NOISE_SIGMA = 0.01
+MEASUREMENT_SIGMA = 0.01
+MOVEMENT_SIGMA = 0.05
 
 
 def create_log_file():
@@ -74,7 +75,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
                                                         update_delta_t=0.01,
                                                         orig_leader=eng.bots[0],
                                                         orig_leader_delay=1.0 * (i + 1),
-                                                        noise_sigma=NOISE_SIGMA,
+                                                        noise_sigma=MEASUREMENT_SIGMA,
                                                         log_file=log_file,
                                                         id="%02d" % (i + 1))))
 
@@ -195,7 +196,7 @@ def main(args):
         iter_counter += 1
         if iter_counter % FRAMES_PER_BOT_UPDATE == 0:
             eng.update_bots()
-        eng.update_physics(delta_time)
+        eng.update_physics(delta_time, MOVEMENT_SIGMA)
 
         collided_set = eng.check_collisions()
 

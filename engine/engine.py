@@ -59,12 +59,12 @@ class Engine(object):
         self._last_bot_update_time = self.time
 
 
-    def update_physics(self, delta_time):
+    def update_physics(self, delta_time, movement_sigma):
         for bot in self.bots:
             bot.real.update_vel(delta_time, bot.virtual.desired_vel)
 
         for bot in self.bots:
-            bot.real.update_state(delta_time)
+            bot.real.update_state(delta_time, movement_sigma)
 
         self._last_physics_update_time = self.time
 
