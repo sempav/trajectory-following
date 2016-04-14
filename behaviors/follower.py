@@ -386,7 +386,8 @@ class Follower(BehaviorBase):
                          "real_e_theta": real_e.theta,
                          "approx_e_x": approx_e.x,
                          "approx_e_y": approx_e.y,
-                         "approx_e_theta": approx_e.theta
+                         "approx_e_theta": approx_e.theta,
+                         "leader_is_visible": self.leader_is_visible
                         }
             print >> self.log_file, log_dict
 

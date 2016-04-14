@@ -55,6 +55,10 @@ def plot(header, data, output_filename):
     v_data = []
     omega_data = []
     approx_e_data = []
+
+    invisible_regions = []
+    last_invis_start = 0.0
+    now_invisible = False
     for d in data:
         time_data.append(d["time"])
         ex = d["e_x"]
@@ -69,6 +73,15 @@ def plot(header, data, output_filename):
         omega_data.append(d["omega"])
         approx_e_data.append(sqrt(d["approx_e_x"]**2 +
                                   d["approx_e_y"]**2))
+        cur_visible = d["leader_is_visible"]
+        if cur_visible:
+            if now_invisible:
+                invisible_regions.append((last_invis_start, time_data[-1]))
+                now_invisible = False
+        else: # not cur_visible
+            if not now_invisible:
+                now_invisible = True
+                last_invis_start = time_data[-1]
 
     artists = []
 
@@ -104,6 +117,8 @@ def plot(header, data, output_filename):
     axes = plt.subplot(325)
     approx_e, = axes.plot(time_data, approx_e_data, '-', label=r'$e_{approx}$')
     axes.grid()
+    for st, fn in invisible_regions:
+        axes.axvspan(st, fn, color='red', alpha=0.3)
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     artists.append(lgd)
 
