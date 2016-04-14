@@ -48,8 +48,7 @@ def plot(header, data, output_filename):
     #plt.rcParams['legend.framealpha'] = 0.5
 
     time_data = []
-    ex_data = []
-    ey_data = []
+    e_data = []
     et_data = []
     real_e_data = []
     real_et_data = []
@@ -58,8 +57,9 @@ def plot(header, data, output_filename):
     approx_e_data = []
     for d in data:
         time_data.append(d["time"])
-        ex_data.append(d["e_x"])
-        ey_data.append(d["e_y"])
+        ex = d["e_x"]
+        ey = d["e_y"]
+        e_data.append(sqrt(ex**2 + ey**2))
         et_data.append(d["e_theta"])
         real_ex = d["real_e_x"]
         real_ey = d["real_e_y"]
@@ -73,49 +73,35 @@ def plot(header, data, output_filename):
     artists = []
 
     fig = plt.figure()
-    axes = plt.subplot(421)
-    ex, = axes.plot(time_data, ex_data, '-', label=r'$e_x$')
-    ey, = axes.plot(time_data, ey_data, '-', label=r'$e_y$')
+    axes = plt.subplot(321)
+    e, = axes.plot(time_data, e_data, '-', label=r'$\Vert e\Vert$')
     axes.grid()
     #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     artists.append(lgd)
 
-    axes = plt.subplot(423)
-    real_e, = axes.plot(time_data, real_e_data, '-', label=r'real $\Vert e\Vert$')
+    axes = plt.subplot(323)
+    real_e, = axes.plot(time_data, real_e_data, '-', label=r'total $\Vert e\Vert$')
     axes.grid()
     #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     artists.append(lgd)
 
-    axes = plt.subplot(422)
+    axes = plt.subplot(322)
     et, = axes.plot(time_data, et_data, 'r-', label=r'$e_\theta$')
     axes.grid()
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     artists.append(lgd)
     #axes.set_ylim([-pi, pi])
 
-    axes = plt.subplot(424)
-    real_et, = axes.plot(time_data, real_et_data, 'r-', label=r'real $e_\theta$')
+    axes = plt.subplot(324)
+    real_et, = axes.plot(time_data, real_et_data, 'r-', label=r'total $e_\theta$')
     axes.grid()
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     artists.append(lgd)
     #axes.set_ylim([-pi, pi])
 
-    axes = plt.subplot(425)
-    ev, = axes.plot(time_data, v_data, 'g-', label=r'$v$')
-    axes.grid()
-    #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
-    lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    artists.append(lgd)
-
-    axes = plt.subplot(426)
-    eomega, = axes.plot(time_data, omega_data, '-', label=r'$\omega$')
-    axes.grid()
-    lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-    artists.append(lgd)
-
-    axes = plt.subplot(427)
+    axes = plt.subplot(325)
     approx_e, = axes.plot(time_data, approx_e_data, '-', label=r'$e_{approx}$')
     axes.grid()
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
