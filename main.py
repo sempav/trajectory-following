@@ -27,6 +27,8 @@ DEFAULT_START_POS = Point(4.0, 0.0)
 MEASUREMENT_SIGMA = 0.01
 MOVEMENT_SIGMA = 0.05
 
+MAX_INTERACTIVE_ROT_VEL = 5.0
+
 
 def create_log_file():
     fname = "data"
@@ -171,14 +173,14 @@ def main(args):
         if pygame.K_LEFT in pressed_keys:
             try:
                 max_rot_vel = 2 * (eng.bots[0].real.max_vel - eng.bots[0].real.vel) / (eng.bots[0].real.width * eng.bots[0].real.vel)
-                #max_rot_vel = 2.0
+                max_rot_vel = min(max_rot_vel, MAX_INTERACTIVE_ROT_VEL)
                 eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, max_rot_vel * delta_time)
             except ZeroDivisionError:
                 pass
         if pygame.K_RIGHT in pressed_keys:
             try:
                 max_rot_vel = 2 * (eng.bots[0].real.max_vel - eng.bots[0].real.vel) / (eng.bots[0].real.width * eng.bots[0].real.vel)
-                #max_rot_vel = 2.0
+                max_rot_vel = min(max_rot_vel, MAX_INTERACTIVE_ROT_VEL)
                 eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, -max_rot_vel * delta_time)
             except ZeroDivisionError:
                 pass
