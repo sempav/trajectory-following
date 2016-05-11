@@ -10,21 +10,12 @@ from math import pi, sqrt
 SimulationInfo = namedtuple('SimulationInfo', 'header, bots')
 BotInfo = namedtuple('BotInfo', 'header, data')
 
-def main():
-    if len(argv) < 2 or len(argv) > 3:
-        print "Usage:", argv[0], "<dataX.txt> [<output_prefix>]"
-        exit(0)
-
-    if len(argv) == 3:
-        output_prefix = argv[2]
-    else:
-        output_prefix = 'plot'
-
-    info = read_info(argv[1])
+def main(args):
+    info = read_info(args.input)
     num_bots = info.header['num_bots']
     for bot in sorted(info.bots.values()):
         print "Plotting", str(bot.header['id']) + "..."
-        plot(bot.header, bot.data, output_prefix + '_' + bot.header["id"] + ".png")
+        plot(args.start, args.end, bot.header, bot.data, args.output_prefix + '_' + bot.header["id"] + ".png")
 
 
 def read_info(filename):
@@ -43,7 +34,7 @@ def read_info(filename):
     return SimulationInfo(header=header, bots=bots)
 
 
-def plot(header, data, output_filename):
+def plot(start_time, end_time, header, data, output_filename):
 
     #plt.rcParams['legend.framealpha'] = 0.5
 
@@ -60,7 +51,9 @@ def plot(header, data, output_filename):
     last_invis_start = 0.0
     now_invisible = False
     for d in data:
-        time_data.append(d["time"])
+        if not(start_time <= d["time"] <= end_time):
+            continue
+        time_data.append(d["time"] - start_time)
         ex = d["e_x"]
         ey = d["e_y"]
         e_data.append(sqrt(ex**2 + ey**2))
@@ -114,11 +107,23 @@ def plot(header, data, output_filename):
     artists.append(lgd)
     #axes.set_ylim([-pi, pi])
 
+    #axes = plt.subplot(325)
+    #approx_e, = axes.plot(time_data, approx_e_data, '-', label=r'$e_{approx}$')
+    #axes.grid()
+    #for st, fn in invisible_regions:
+    #    axes.axvspan(st, fn, color='red', alpha=0.3)
+    #lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+    #artists.append(lgd)
+
     axes = plt.subplot(325)
-    approx_e, = axes.plot(time_data, approx_e_data, '-', label=r'$e_{approx}$')
+    omega, = axes.plot(time_data, v_data, 'r-', label=r'$v$')
     axes.grid()
-    for st, fn in invisible_regions:
-        axes.axvspan(st, fn, color='red', alpha=0.3)
+    lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+    artists.append(lgd)
+
+    axes = plt.subplot(326)
+    omega, = axes.plot(time_data, omega_data, 'r-', label=r'$\omega$')
+    axes.grid()
     lgd = axes.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     artists.append(lgd)
 
@@ -142,8 +147,18 @@ def plot(header, data, output_filename):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument('input', metavar='input', type=str,
+                        help='File containing simulation data')
+    parser.add_argument('output_prefix', type=str, nargs='?',
+                        help='Output file prefix', default='plot')
+    parser.add_argument('--start', '-s', type=float,
+                        default=0.0,
+                        help='Start of the time interval')
+    parser.add_argument('--end', '-e', type=float,
+                        default=1e+5,
+                        help='End of the time interval')
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_arguments())
