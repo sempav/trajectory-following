@@ -70,8 +70,8 @@ class DifferentialModel(object):
 
 
     def update_state(self, delta_time, movement_sigma):
-        self.lvel *= 1.0 + gauss(0.0, movement_sigma)
-        self.rvel *= 1.0 + gauss(0.0, movement_sigma)
+        self.lvel += gauss(0.0, movement_sigma)
+        self.rvel += gauss(0.0, movement_sigma)
         self.pos += delta_time * self.vel * self.dir
         self.dir = rotate(self.dir, delta_time * self.rot_vel)
         self.shape.center = self.pos

@@ -11,7 +11,7 @@ import models
 from engine.vector import Point, Vector, normalize
 from engine.graphics import Graphics
 from engine.field import Field
-from engine.bot import Bot, BOT_RADIUS
+from engine.bot import Bot, BOT_RADIUS, BOT_ACCEL_CAP
 from obstacle_maps import maps
 from mock_trajectories import *
 
@@ -25,7 +25,7 @@ NUM_FOLLOWERS = 1
 DEFAULT_START_POS = Point(4.0, 0.0)
 
 MEASUREMENT_SIGMA = 0.01
-MOVEMENT_SIGMA = 0.05
+MOVEMENT_SIGMA = 0.5 * BOT_ACCEL_CAP / FRAMERATE
 
 MAX_INTERACTIVE_ROT_VEL = 5.0
 
