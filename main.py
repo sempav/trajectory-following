@@ -1,4 +1,5 @@
 #! /usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 
 import argparse
@@ -206,9 +207,9 @@ def main(args):
                      obstacles = eng.obstacles,
                      targets = eng.targets)
 
-        text = ("Time: %.3f" % eng.time) + ("s, FPS: %.2f" % (1.0 / real_delta_time))
-        if collided_set: # a collision occurred
-            text += ". COLLISION"
+        text = ("Time: %0.1f" % eng.time) + ("s")#, FPS: %.2f" % (1.0 / real_delta_time))
+        text += u", update Δt = %.3fs" % (FRAMES_PER_BOT_UPDATE * 1.0/FRAMERATE)
+        if collided_set: # collision is occurring currently
             collision_has_occurred = True
         if collision_has_occurred:
             text += ". A collision has been recorded"
