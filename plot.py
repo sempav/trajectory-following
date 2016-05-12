@@ -14,6 +14,8 @@ def main(args):
     info = read_info(args.input)
     num_bots = info.header['num_bots']
     for bot in sorted(info.bots.values()):
+        if bot.header["id"] == 'leader':
+            continue
         print "Plotting", str(bot.header['id']) + "..."
         plot(args.start, args.end, bot.header, bot.data, args.output_prefix + '_' + bot.header["id"] + ".png")
 
