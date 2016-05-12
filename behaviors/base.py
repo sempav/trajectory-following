@@ -1,9 +1,16 @@
+from collections import namedtuple
+
+Instr = namedtuple('Instr', 'v, omega')
+
 class BehaviorBase(object):
     """
-    "Abstract" base class for movement logic.
+    Base class for movement logic.
 
-    Any concrete subclass must redefine calc_desired_velocity.
+    Any concrete subclass must define calc_desired_velocity.
     """
+
+    def __init__(self):
+        self.desired_vel = Instr(0, 0)
 
     def calc_desired_velocity(self, bots, obstacles, targets):
         raise NotImplemented
