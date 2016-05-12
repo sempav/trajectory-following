@@ -1,4 +1,4 @@
-from base import BehaviorBase
+from base import BehaviorBase, Instr
 from engine.bot import BOT_RADIUS, BOT_VEL_CAP, BOT_ACCEL_CAP, Bot
 from engine.vector import Vector, Point, length, normalize, dist, rotate, cross, dot, \
                           NormalizationError
@@ -14,7 +14,9 @@ from engine.graphics import draw_circle, draw_line, draw_arc, \
                             DRAW_REFERENCE_POS, \
                             DRAW_SENSOR_RANGE, \
                             DRAW_VISIBILITY, \
-                            DRAW_DELAYED_LEADER_POS
+                            DRAW_DELAYED_LEADER_POS, \
+                            DISPLAYED_POINTS_COUNT, \
+                            DISPLAYED_USED_POINTS_COUNT
 from engine.shapes import Ray, first_intersection
 from ring_buffer import RingBuffer, get_interval
 from trajectory import Trajectory
@@ -28,17 +30,18 @@ import numpy as np
 
 POSITIONS_BUFFER_SIZE = 150
 SAMPLE_COUNT = 40
-MIN_DISTANCE_TO_LEADER = 2 * BOT_RADIUS
+MIN_DISTANCE_TO_LEADER = 2.2 * BOT_RADIUS
 DISABLE_CIRCLES = False
-MIN_CIRCLE_CURVATURE = 10.0
+DISABLE_FEEDBACK = False
+MIN_CIRCLE_CURVATURE = 8.0
+MAX_CURVATURE = MIN_CIRCLE_CURVATURE
+# keep-curvature:
+#MIN_CIRCLE_CURVATURE = 0.0
+#MAX_CURVATURE = 100.0 # disabled
 
 TRAJECTORY_SEGMENT_COUNT = 10
-DISPLAYED_POINTS_COUNT = 0
-DISPLAYED_USED_POINTS_COUNT = 0
-
 DEFAULT_FOV = 0.25 * pi
 
-Instr = namedtuple('Instr', 'v, omega')
 TimedPosition = namedtuple('TimedPosition', 'time, pos')
 TimedState = namedtuple('TimedState', 'time, pos, theta')
 # used to represent bot's state vector: x, y, theta
@@ -103,6 +106,7 @@ class Follower(BehaviorBase):
         zeta in (0, 1) is a damping coefficient
         trajectory_delay is the time interval between leader and follower
         """
+        super(Follower, self).__init__()
 
         assert(isinstance(leader, Bot))
         assert(isinstance(orig_leader, Bot))
@@ -136,7 +140,7 @@ class Follower(BehaviorBase):
         if needed_buffer_size > POSITIONS_BUFFER_SIZE:
             sys.stderr.write("leader_positions buffer is too small for update_delta_t = {}".format(self.update_delta_t) +
                              " (current = {}, required = {})".format(POSITIONS_BUFFER_SIZE, needed_buffer_size))
-            raise RuntimeError, "leader_positions buffer is too small for update_delta_t = {}".format(self.update_delta_t)
+            raise RuntimeError, "leader_positions buffer is too small"
         self.last_update_time = 0.0
 
         self.noise_sigma = noise_sigma
@@ -235,6 +239,9 @@ class Follower(BehaviorBase):
         if abs(k) < MIN_CIRCLE_CURVATURE:
             k = copysign(MIN_CIRCLE_CURVATURE, k)
 
+        if abs(k) > MAX_CURVATURE:
+            k = copysign(MAX_CURVATURE, k)
+
         radius = abs(1.0/k)
         # trajectory direction at time t_fn
         try:
@@ -287,6 +294,8 @@ class Follower(BehaviorBase):
             self.store_leaders_state(engine, obstacles)
 
         # reduce random movements at the start
+        # TODO: this causes oscillations that smash bots into each other.
+        # Change to something smoother. PID control?
         if self.leader_is_visible and length(self.pos - self.leader_noisy_pos) < MIN_DISTANCE_TO_LEADER:
             return Instr(0.0, 0.0)
 
@@ -346,8 +355,9 @@ class Follower(BehaviorBase):
         se = sin(e.theta) / e.theta if e.theta != 0 else 1.0
         omega = omega_ff + k_y * v_ff * se * e.y + k_theta * e.theta
 
-        #v = v_ff
-        #omega = omega_ff
+        if DISABLE_FEEDBACK:
+            v = v_ff
+            omega = omega_ff
 
         real_e = State(0.0, 0.0, 0.0)
         try:
@@ -374,6 +384,9 @@ class Follower(BehaviorBase):
             log_dict = {"id": self.id,
                          "time": engine.time,
                          "delta_time": engine.time_since_last_bot_update,
+                         "x": cur.x,
+                         "y": cur.y,
+                         "theta": cur.theta,
                          "v": v,
                          "omega": omega,
                          "v_ff": v_ff,

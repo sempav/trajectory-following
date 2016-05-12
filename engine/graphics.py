@@ -28,6 +28,9 @@ DRAW_APPROX_TRAJECTORY = True
 DRAW_REFERENCE_POS = True
 DRAW_DELAYED_LEADER_POS = False
 
+DISPLAYED_POINTS_COUNT = 10
+DISPLAYED_USED_POINTS_COUNT = 0
+
 
 def draw_circle(screen, field, color, center, radius, thickness=2):
     pygame.draw.circle(screen, color,

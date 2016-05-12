@@ -13,4 +13,4 @@ def make_circle():
     return make_lissajous(20.0, 4, 4, 1, 1)
 
 def make_ellipse():
-    return make_lissajous(12.0, 4, 1.5, 1, 1)
+    return make_lissajous(20.0, 6, 1.0, 1, 1)

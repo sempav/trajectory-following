@@ -5,6 +5,8 @@
 import argparse
 import os
 import pygame
+import sys
+from math import copysign
 
 import engine
 import behaviors
@@ -22,10 +24,9 @@ FRAMES_PER_BOT_UPDATE = 1
 
 NUM_FOLLOWERS = 1
 
-
 DEFAULT_START_POS = Point(4.0, 0.0)
 
-MEASUREMENT_SIGMA = 0.01
+MEASUREMENT_SIGMA = 0.00
 MOVEMENT_SIGMA = 0.5 * BOT_ACCEL_CAP / FRAMERATE
 
 MAX_INTERACTIVE_ROT_VEL = 5.0
@@ -44,7 +45,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
     log_file = None
     if log_data:
         log_file = create_log_file()
-        log_dict = {"num_bots": NUM_FOLLOWERS}
+        log_dict = {"num_bots": 1 + NUM_FOLLOWERS} # counting the leader
         print >> log_file, log_dict
 
     eng.bots = []
@@ -57,18 +58,20 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
         start_dir = Vector(0.0, 1.0)
         eng.bots.append(Bot(models.MockModel(pos=start_pos, dir=start_dir, vel=0.0,
                                              pos_fun=pos_fun, collidable=True),
-                            behavior=behaviors.Leader()))
+                            behavior=behaviors.Leader(log_file=log_file)))
     else:
-        pos_fun=make_lissajous(15.0, 4, 0.5, 1, 3)
-        #pos_fun = make_lissajous(35.0, 4, 3, 1, 4)
+        #pos_fun = make_lissajous(17.0, 4, 1.2, 1, 3)
+        #pos_fun = make_lissajous(25.5, 4, 1.8, 1, 3)
+        #pos_fun = make_ellipse()
+        pos_fun = make_lissajous(5.0, 1, 1, 1, 1) # circle
         eng.bots.append(Bot(models.MockModel(pos=(0.0, 0.0), dir=(1.0, 0.0), vel=0.0, pos_fun=pos_fun, collidable=True),
-                            behavior=behaviors.Leader()))
+                            behavior=behaviors.Leader(log_file=log_file)))
         start_pos = eng.bots[0].real.pos_fun(0.0)
         start_dir = normalize(eng.bots[0].real.vel_fun(0.0, 0.01))
         eng.bots[0].real.pos = start_pos
         eng.bots[0].real.dir = start_dir
 
-    displacement = -start_dir * 2.1 * BOT_RADIUS
+    displacement = -start_dir * 3.1 * BOT_RADIUS
     for i in xrange(NUM_FOLLOWERS):
         eng.bots.append(Bot(model(pos=start_pos + (i + 1) * displacement,
                                   dir=start_dir, vel=0.0),
@@ -171,6 +174,9 @@ def main(args):
                           interactive=args.interactive, log_data=args.log_data)
                     collision_has_occurred = False
 
+        if finished:
+            break
+
         if pygame.K_LEFT in pressed_keys:
             try:
                 max_rot_vel = 2 * (eng.bots[0].real.max_vel - eng.bots[0].real.vel) / (eng.bots[0].real.width * eng.bots[0].real.vel)
@@ -218,7 +224,9 @@ def main(args):
         graph.screen.blit(ren, (30, graph.size[1] - text_size[1]))
         pygame.display.flip()
 
+    pygame.display.quit()
     pygame.quit()
+    sys.exit()
 
 
 def parse_arguments():
