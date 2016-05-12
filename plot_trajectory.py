@@ -14,33 +14,45 @@ def main(args):
     info = read_info(args.input)
     num_bots = info.header['num_bots']
 
-    x,y = extract_trajectory(args.start, args.end, info.bots['01'].header, info.bots['01'].data)
-    lx,ly = extract_trajectory(args.start, args.end, info.bots['leader'].header, info.bots['leader'].data)
-
-    artists = []
-
-    axes = plt.subplot(111)
-    traj = axes.plot(x, y, '-', label='follower')
-    lead_traj = axes.plot(lx, ly, '--', label='leader')
-    #real_e, = axes.plot(time_data, real_e_data, '-', label=r'$\Vert e\Vert$')
-    axes.grid()
-    #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
-    lgd = axes.legend(loc='upper left', prop={'size':20})
-    artists.append(lgd)
-    plt.axis('equal')
-
-    #fig.tight_layout()
-
-    plt.rcParams['lines.linewidth'] = 1.0
-
-    #fig.subplots_adjust(hspace=0.3, wspace=1.0)
-
     file_type = '.pdf' if args.pdf else '.png'
+    lx,ly = extract_trajectory(args.start, args.end, info.bots['leader'].header, info.bots['leader'].data)
+    if args.id == 'all':
+        for bot in sorted(info.bots.values()):
+            if (bot.header['id'] == 'leader'):
+                continue
+            print "Plotting", str(bot.header['id']) + "..."
+            x,y = extract_trajectory(args.start, args.end, bot.header, bot.data)
+            plot_trajectory(x, y, lx, ly, args, args.output_prefix + '_' + bot.header['id'] + file_type)
+            plt.clf()
+    else:
+        x,y = extract_trajectory(args.start, args.end, info.bots[args.id].header,
+                                                       info.bots[args.id].data)
+        plot_trajectory(x, y, lx, ly, args, args.output_prefix + file_type)
 
-    plt.savefig(args.output_prefix + file_type,
-                dpi=150, bbox_extra_artists=artists,
-                bbox_inches='tight')
-    #plt.show()
+
+def plot_trajectory(x, y, lx, ly, args, output_filename):
+        artists = []
+        axes = plt.subplot(111)
+        traj = axes.plot(x, y, '-', label='follower')
+        lead_traj = axes.plot(lx, ly, '--', label='leader')
+        #real_e, = axes.plot(time_data, real_e_data, '-', label=r'$\Vert e\Vert$')
+        axes.grid()
+        #lgd = axes.legend(ncol=1, loc='center right', bbox_to_anchor=(-0.15, 0.5))
+        lgd = axes.legend(loc=args.loc, prop={'size':20})
+        artists.append(lgd)
+        plt.axis('equal')
+
+        #fig.tight_layout()
+
+        plt.rcParams['lines.linewidth'] = 1.0
+
+        #fig.subplots_adjust(hspace=0.3, wspace=1.0)
+
+        plt.savefig(output_filename,
+                    dpi=150, bbox_extra_artists=artists,
+                    bbox_inches='tight')
+        #plt.show()
+
 
 def read_info(filename):
     f = open(filename, "r")
@@ -106,6 +118,10 @@ def parse_arguments():
                         default=1e+5,
                         help='End of the time interval')
     parser.add_argument('--pdf', action='store_true', default=False)
+    parser.add_argument('--id', type=str, default='all',
+                        help='Robot id to plot data for')
+    parser.add_argument('--loc', type=str,
+                        default='best')
     return parser.parse_args()
 
 

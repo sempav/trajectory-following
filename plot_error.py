@@ -15,8 +15,11 @@ def main(args):
     num_bots = info.header['num_bots']
     file_type = '.pdf' if args.pdf else '.png'
     for bot in sorted(info.bots.values()):
+        if (bot.header['id'] == 'leader'):
+            continue
         print "Plotting", str(bot.header['id']) + "..."
         plot(args.start, args.end, bot.header, bot.data, args.output_prefix + '_' + bot.header["id"] + file_type)
+        plt.clf()
 
 
 def read_info(filename):
@@ -94,7 +97,7 @@ def parse_arguments():
                         help='End of the time interval')
     parser.add_argument('--pdf', action='store_true', default=False)
     parser.add_argument('--loc', type=str,
-                        default='upper right')
+                        default='best')
     return parser.parse_args()
 
 
