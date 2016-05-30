@@ -6,10 +6,6 @@ from engine.vector import Point, Vector, length, normalize, rotate, signed_angle
 from engine.graphics import draw_circle, draw_line, draw_directed_circle, BOT_COLOR
 from engine.shapes import Circle
 
-MIN_ROTATION_ANGLE = 0.00 * pi
-ROTATION_GAIN = 1.0 # !before changing check abs_vel *= cos(ang) line
-MAX_VEL_ANGLE = pi / 3
-
 class DifferentialModel(object):
     def __init__(self, pos, dir, vel = 0.0,
                        max_vel = BOT_VEL_CAP,
