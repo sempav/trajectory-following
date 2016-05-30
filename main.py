@@ -22,11 +22,11 @@ from mock_trajectories import *
 FRAMERATE = 60
 FRAMES_PER_BOT_UPDATE = 1
 
-NUM_FOLLOWERS = 1
+NUM_FOLLOWERS = 5
 
 DEFAULT_START_POS = Point(4.0, 0.0)
 
-MEASUREMENT_SIGMA = 0.00
+MEASUREMENT_SIGMA = 0.05
 MOVEMENT_SIGMA = 0.5 * BOT_ACCEL_CAP / FRAMERATE
 
 MAX_INTERACTIVE_ROT_VEL = 5.0
@@ -63,7 +63,8 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
         #pos_fun = make_lissajous(17.0, 4, 1.2, 1, 3)
         #pos_fun = make_lissajous(25.5, 4, 1.8, 1, 3)
         #pos_fun = make_ellipse()
-        pos_fun = make_lissajous(5.0, 1, 1, 1, 1) # circle
+        #pos_fun = make_lissajous(18.0, 4, 4, 1, 1) # circle
+        pos_fun = make_figure8()
         eng.bots.append(Bot(models.MockModel(pos=(0.0, 0.0), dir=(1.0, 0.0), vel=0.0, pos_fun=pos_fun, collidable=True),
                             behavior=behaviors.Leader(log_file=log_file)))
         start_pos = eng.bots[0].real.pos_fun(0.0)
@@ -83,7 +84,8 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
                                                         orig_leader_delay=1.0 * (i + 1),
                                                         noise_sigma=MEASUREMENT_SIGMA,
                                                         log_file=log_file,
-                                                        id="%02d" % (i + 1))))
+                                                        id="%02d" % (i + 1),
+                                                        dt=1.0/FRAMERATE)))
 
     eng.obstacles = maps[obstacle_map][:]
 
@@ -100,6 +102,9 @@ def show_state(movement):
 
 
 def main(args):
+    print "Starting with parameters:"
+    print "MEASUREMENT_SIGMA =", MEASUREMENT_SIGMA
+    print "MOVEMENT_SIGMA =", MOVEMENT_SIGMA
     # This seems to set initial window position on Windows
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (1,20)
 

@@ -9,6 +9,7 @@ from engine.graphics import draw_circle, draw_line, draw_arc, \
                             SENSOR_COLOR, \
                             VISIBILITY_COLOR, \
                             TRAJECTORY_POINTS_COLOR, \
+                            NOISY_TRAJECTORY_POINTS_COLOR, \
                             USED_TRAJECTORY_POINTS_COLOR, \
                             DRAW_APPROX_TRAJECTORY, \
                             DRAW_REFERENCE_POS, \
@@ -26,6 +27,8 @@ from math import sin, cos, pi, atan2, sqrt, copysign, isnan, log
 from random import gauss
 import sys
 import numpy as np
+from filterpy.kalman import MerweScaledSigmaPoints
+from filterpy.kalman import UnscentedKalmanFilter as UKF
 
 
 POSITIONS_BUFFER_SIZE = 150
@@ -33,6 +36,7 @@ SAMPLE_COUNT = 40
 MIN_DISTANCE_TO_LEADER = 2.2 * BOT_RADIUS
 DISABLE_CIRCLES = False
 DISABLE_FEEDBACK = False
+DISABLE_UKF = True
 MIN_CIRCLE_CURVATURE = 8.0
 MAX_CURVATURE = MIN_CIRCLE_CURVATURE
 # keep-curvature:
@@ -47,6 +51,66 @@ TimedState = namedtuple('TimedState', 'time, pos, theta')
 # used to represent bot's state vector: x, y, theta
 State = namedtuple('State', 'x, y, theta')
 
+#x: x, y, theta, v, omega, a
+#i: 0, 1, 2,     3, 4,     5
+# Used by UKF
+def f(x, dt):
+    if abs(x[4]) < 1e-3:
+        return np.array([x[0] + (dt * x[2] + x[5] * 0.5 * dt**2) * cos(x[3]),
+                         x[1] + (dt * x[2] + x[5] * 0.5 * dt**2) * sin(x[3]),
+                         x[2] + dt * x[4],
+                         x[3] + dt * x[5],
+                         x[4],
+                         x[5]])
+    else:
+        return np.array([# x
+                         x[0]
+                         # + (at + v) sin(theta + omega * dt) / omega
+                         + (x[3] + x[5] * dt) * sin(x[2] + x[4] * dt) / x[4]
+                         # a(cos(theta + omega * dt) - cos(theta)) / omega^2
+                         + x[5] * (cos(x[2] + x[4] * dt) - cos(x[2])) / x[4]**2
+                         # - v sin(theta) / omega
+                         - x[3] * sin(x[2]) / x[4],
+
+                         # y
+                         x[1]
+                         # - (at + v) cos(theta + omega * dt) / omega
+                         - (x[3] + x[5] * dt) * cos(x[2] + x[4] * dt) / x[4]
+                         # + a(sin(theta + omega * dt) - sin(theta)) / omega^2
+                         + x[5] * (sin(x[2] + x[4] * dt) - sin(x[2])) / x[4]**2
+                         # + v cos(theta) / omega
+                         + x[3] * cos(x[2]) / x[4],
+
+                         # theta + omega * dt
+                         x[2] + dt * x[4],
+                         # v + a * dt
+                         x[3] + dt * x[5],
+                         # omega
+                         x[4],
+                         # a
+                         x[5]
+                         ])
+
+#def f(x, dt):
+#    if abs(x[4]) < 1e-5:
+#        return np.array([x[0] + dt * x[2] * cos(x[3]),
+#                         x[1] + dt * x[2] * sin(x[3]),
+#                         x[2] + dt * x[4],
+#                         x[3] + dt * x[5],
+#                         x[4],
+#                         x[5]])
+#    else:
+#        R = x[3] / x[4]
+#        return np.array([x[0] - R * sin(x[2]) + R * sin(x[2] + x[5] * dt),
+#                         x[1] + R * cos(x[2]) - R * cos(x[2] + x[5] * dt),
+#                         x[2] + dt * x[4],
+#                         x[3] + dt * x[5],
+#                         x[4],
+#                         x[5]])
+
+# Used by UKF
+def h(x):
+    return np.array([x[0], x[1]])
 
 def normalize_angle(a):
     """
@@ -96,7 +160,8 @@ class Follower(BehaviorBase):
                  orig_leader=None, orig_leader_delay=None,
                  noise_sigma=0.0, log_file=None,
                  visibility_fov=DEFAULT_FOV, visibility_radius=None,
-                 id=None):
+                 id=None,
+                 dt=0.02):
 
         """
         Construct a follower Behavior.
@@ -125,6 +190,7 @@ class Follower(BehaviorBase):
         # tuple's first field is time, second is the
         # corresponding position of the leader
         self.leader_positions = RingBuffer(POSITIONS_BUFFER_SIZE)
+        self.noisy_leader_positions = RingBuffer(POSITIONS_BUFFER_SIZE)
 
         self.leader_is_visible = False
 
@@ -168,6 +234,19 @@ class Follower(BehaviorBase):
                          "trajectory_delay": trajectory_delay}
             print >> self.log_file, log_dict
 
+        q = 0.01   # std of process
+        r = 0.05   # std of measurement
+
+        self.delta_time = dt
+        if not DISABLE_UKF:
+            points = MerweScaledSigmaPoints(n=6, alpha=.1, beta=2., kappa=-3)
+            self.ukf = UKF(dim_x=6, dim_z=2, fx=f, hx=h, dt=dt, points=points)
+
+            self.ukf_x_initialized = 0
+            #self.ukf.x = np.array([0, 0, 1, pi/4, 0, 0])
+            self.ukf.R = np.diag([r, r]);
+            self.ukf.Q = np.diag([0, 0, 0, 0, q, q])
+
 
     def point_in_fov(self, p):
         if length(p - self.pos) > self.visibility_radius:
@@ -195,11 +274,38 @@ class Follower(BehaviorBase):
             noisy_pos = self.leader.real.pos
             noisy_pos += Vector(gauss(0.0, self.noise_sigma),
                                 gauss(0.0, self.noise_sigma))
+            if DISABLE_UKF:
+                filtered_pos = noisy_pos
+            else:
+                if (self.ukf_x_initialized == 0):
+                    self.ukf_x1 = noisy_pos
+                    self.ukf_x_initialized += 1
+                    filtered_pos = noisy_pos
+                    self.ukf.x = np.array([noisy_pos.x, noisy_pos.y,
+                                           0, pi/2, 0, 0])
+                #elif (self.ukf_x_initialized == 1):
+                #    self.ukf_x2 = noisy_pos
+                #    self.ukf_x_initialized += 1
+                #    self.ukf.x = np.array([noisy_pos.x, noisy_pos.y,
+                #                           length((noisy_pos - self.ukf_x1) / self.delta_time),
+                #                           atan2(noisy_pos.y - self.ukf_x1.y,
+                #                                 noisy_pos.x - self.ukf_x1.x),
+                #                           0, 0])
+                #    filtered_pos = noisy_pos
+                else: # UKF is initialized
+                    self.ukf.predict()
+                    self.ukf.update(np.array(noisy_pos))
+                    filtered_pos = Point(self.ukf.x[0], self.ukf.x[1])
+                                      
             self.leader_noisy_pos = noisy_pos
-            self.leader_positions.append(TimedPosition(engine.time, noisy_pos))
+            self.noisy_leader_positions.append(TimedPosition(engine.time, noisy_pos))
+            self.leader_positions.append(TimedPosition(engine.time, filtered_pos))
             self.last_update_time = engine.time
         else:
             self.leader_is_visible = False
+            if not DISABLE_UKF:
+                self.ukf.predict()
+                #TODO: do magic with UKF?
 
         orig_leader_theta = atan2(self.orig_leader.real.dir.y,
                                   self.orig_leader.real.dir.x)
@@ -252,7 +358,8 @@ class Follower(BehaviorBase):
         r = Vector(-d.y, d.x) / k
         center = Point(last_x, last_y) + r
         phase = atan2(-r.y, -r.x)
-        freq = known.dx(last_t) / r.y
+        #freq = known.dx(last_t) / r.y
+        freq = k
         self.x_approx = lambda time: known.x(time) if time < last_t else \
                                      center.x + radius * cos(freq * (time - last_t) + phase)
         self.y_approx = lambda time: known.y(time) if time < last_t else \
@@ -296,8 +403,8 @@ class Follower(BehaviorBase):
         # reduce random movements at the start
         # TODO: this causes oscillations that smash bots into each other.
         # Change to something smoother. PID control?
-        if self.leader_is_visible and length(self.pos - self.leader_noisy_pos) < MIN_DISTANCE_TO_LEADER:
-            return Instr(0.0, 0.0)
+        #if self.leader_is_visible and length(self.pos - self.leader_noisy_pos) < MIN_DISTANCE_TO_LEADER:
+        #    return Instr(0.0, 0.0)
 
         t = engine.time - self.trajectory_delay
         self.trajectory = self.generate_trajectory(self.leader_positions, t)
@@ -413,6 +520,9 @@ class Follower(BehaviorBase):
             for index, (time, point) in enumerate(self.leader_positions):
                 if index % k == 0:
                     draw_circle(screen, field, TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
+            for index, (time, point) in enumerate(self.noisy_leader_positions):
+                if index % k == 0:
+                    draw_circle(screen, field, NOISY_TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
 
         if DISPLAYED_USED_POINTS_COUNT > 0:
             k = len(self.traj_interval) / DISPLAYED_USED_POINTS_COUNT
