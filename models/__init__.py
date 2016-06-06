@@ -1,5 +1,4 @@
-__all__ = ['differential', 'holonomic', 'mock']
+__all__ = ['differential', 'mock']
 
 from differential import DifferentialModel
-from holonomic import HolonomicModel
 from mock import MockModel
