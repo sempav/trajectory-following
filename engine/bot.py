@@ -1,10 +1,4 @@
-BOT_RADIUS = 0.3
-BOT_ACCEL_CAP = 5.0# * 1e5
-BOT_VEL_CAP = 2.0# * 1e5
-
-MAX_SENSING_DISTANCE = 5 * BOT_RADIUS
-KNOW_BOT_POSITIONS = True
-
+from config import config
 
 class Bot(object):
     def __init__(self, model, behavior):

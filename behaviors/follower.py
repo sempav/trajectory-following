@@ -1,23 +1,9 @@
 from base import BehaviorBase, Instr
-from engine.bot import BOT_RADIUS, BOT_VEL_CAP, BOT_ACCEL_CAP, Bot
+from config import config
+from engine.bot import Bot
 from engine.vector import Vector, Point, length, normalize, dist, rotate, cross, dot, \
                           NormalizationError
-from engine.graphics import draw_circle, draw_line, draw_arc, \
-                            draw_directed_circle, \
-                            APPROX_TRAJECTORY_COLOR, \
-                            TARGET_POINT_COLOR, \
-                            SENSOR_COLOR, \
-                            VISIBILITY_COLOR, \
-                            TRAJECTORY_POINTS_COLOR, \
-                            NOISY_TRAJECTORY_POINTS_COLOR, \
-                            USED_TRAJECTORY_POINTS_COLOR, \
-                            DRAW_APPROX_TRAJECTORY, \
-                            DRAW_REFERENCE_POS, \
-                            DRAW_SENSOR_RANGE, \
-                            DRAW_VISIBILITY, \
-                            DRAW_DELAYED_LEADER_POS, \
-                            DISPLAYED_POINTS_COUNT, \
-                            DISPLAYED_USED_POINTS_COUNT
+from engine.graphics import draw_circle, draw_line, draw_arc, draw_directed_circle
 from engine.shapes import Ray, first_intersection
 from ring_buffer import RingBuffer, get_interval
 from trajectory import Trajectory
@@ -30,21 +16,6 @@ import numpy as np
 from filterpy.kalman import MerweScaledSigmaPoints
 from filterpy.kalman import UnscentedKalmanFilter as UKF
 
-
-POSITIONS_BUFFER_SIZE = 150
-SAMPLE_COUNT = 40
-MIN_DISTANCE_TO_LEADER = 2.2 * BOT_RADIUS
-DISABLE_CIRCLES = False
-DISABLE_FEEDBACK = False
-DISABLE_UKF = True
-MIN_CIRCLE_CURVATURE = 8.0
-MAX_CURVATURE = MIN_CIRCLE_CURVATURE
-# keep-curvature:
-#MIN_CIRCLE_CURVATURE = 0.0
-#MAX_CURVATURE = 100.0 # disabled
-
-TRAJECTORY_SEGMENT_COUNT = 10
-DEFAULT_FOV = 0.25 * pi
 
 TimedPosition = namedtuple('TimedPosition', 'time, pos')
 TimedState = namedtuple('TimedState', 'time, pos, theta')
@@ -159,7 +130,7 @@ class Follower(BehaviorBase):
                  update_delta_t=0.01,
                  orig_leader=None, orig_leader_delay=None,
                  noise_sigma=0.0, log_file=None,
-                 visibility_fov=DEFAULT_FOV, visibility_radius=None,
+                 visibility_fov=config.FOV_ANGLE, visibility_radius=None,
                  id=None,
                  dt=0.02):
 
@@ -176,7 +147,7 @@ class Follower(BehaviorBase):
         assert(isinstance(leader, Bot))
         assert(isinstance(orig_leader, Bot))
 
-        self.radius = BOT_RADIUS
+        self.radius = config.BOT_RADIUS
         self.leader = leader
         self.orig_leader = orig_leader
         self.trajectory_delay = trajectory_delay
@@ -186,11 +157,11 @@ class Follower(BehaviorBase):
         assert 0 < zeta < 1, "Follower: zeta parameter must be in (0, 1)"
         self.zeta = zeta
 
-        # leader_positions stores POSITIONS_BUFFER_SIZE tuples;
+        # leader_positions stores config.POSITIONS_BUFFER_SIZE tuples;
         # tuple's first field is time, second is the
         # corresponding position of the leader
-        self.leader_positions = RingBuffer(POSITIONS_BUFFER_SIZE)
-        self.noisy_leader_positions = RingBuffer(POSITIONS_BUFFER_SIZE)
+        self.leader_positions = RingBuffer(config.POSITIONS_BUFFER_SIZE)
+        self.noisy_leader_positions = RingBuffer(config.POSITIONS_BUFFER_SIZE)
 
         self.leader_is_visible = False
 
@@ -202,10 +173,10 @@ class Follower(BehaviorBase):
         self.precise_leader_states = []
 
         self.update_delta_t = update_delta_t
-        needed_buffer_size = SAMPLE_COUNT // 2 + self.trajectory_delay / self.update_delta_t
-        if needed_buffer_size > POSITIONS_BUFFER_SIZE:
+        needed_buffer_size = config.SAMPLE_COUNT // 2 + self.trajectory_delay / self.update_delta_t
+        if needed_buffer_size > config.POSITIONS_BUFFER_SIZE:
             sys.stderr.write("leader_positions buffer is too small for update_delta_t = {}".format(self.update_delta_t) +
-                             " (current = {}, required = {})".format(POSITIONS_BUFFER_SIZE, needed_buffer_size))
+                             " (current = {}, required = {})".format(config.POSITIONS_BUFFER_SIZE, needed_buffer_size))
             raise RuntimeError, "leader_positions buffer is too small"
         self.last_update_time = 0.0
 
@@ -215,7 +186,7 @@ class Follower(BehaviorBase):
 
         self.visibility_fov = visibility_fov
         if visibility_radius is None:
-            visibility_radius = 2.0 * trajectory_delay * BOT_VEL_CAP
+            visibility_radius = 2.0 * trajectory_delay * config.BOT_VEL_CAP
         self.visibility_radius = visibility_radius
 
         self.id = id;
@@ -230,7 +201,7 @@ class Follower(BehaviorBase):
                          "g": self.g,
                          "zeta": self.zeta,
                          "noise_sigma": self.noise_sigma,
-                         "reference_points_cnt": SAMPLE_COUNT,
+                         "reference_points_cnt": config.SAMPLE_COUNT,
                          "trajectory_delay": trajectory_delay}
             print >> self.log_file, log_dict
 
@@ -238,7 +209,7 @@ class Follower(BehaviorBase):
         r = 0.05   # std of measurement
 
         self.delta_time = dt
-        if not DISABLE_UKF:
+        if not config.DISABLE_UKF:
             points = MerweScaledSigmaPoints(n=6, alpha=.1, beta=2., kappa=-3)
             self.ukf = UKF(dim_x=6, dim_z=2, fx=f, hx=h, dt=dt, points=points)
 
@@ -274,7 +245,7 @@ class Follower(BehaviorBase):
             noisy_pos = self.leader.real.pos
             noisy_pos += Vector(gauss(0.0, self.noise_sigma),
                                 gauss(0.0, self.noise_sigma))
-            if DISABLE_UKF:
+            if config.DISABLE_UKF:
                 filtered_pos = noisy_pos
             else:
                 if (self.ukf_x_initialized == 0):
@@ -303,7 +274,7 @@ class Follower(BehaviorBase):
             self.last_update_time = engine.time
         else:
             self.leader_is_visible = False
-            if not DISABLE_UKF:
+            if not config.DISABLE_UKF:
                 self.ukf.predict()
                 #TODO: do magic with UKF?
 
@@ -341,12 +312,12 @@ class Follower(BehaviorBase):
         try:
             k = known.curvature(last_t)
         except (ValueError, ZeroDivisionError):
-            k = MIN_CIRCLE_CURVATURE
-        if abs(k) < MIN_CIRCLE_CURVATURE:
-            k = copysign(MIN_CIRCLE_CURVATURE, k)
+            k = config.MIN_CIRCLE_CURVATURE
+        if abs(k) < config.MIN_CIRCLE_CURVATURE:
+            k = copysign(config.MIN_CIRCLE_CURVATURE, k)
 
-        if abs(k) > MAX_CURVATURE:
-            k = copysign(MAX_CURVATURE, k)
+        if abs(k) > config.MAX_CURVATURE:
+            k = copysign(config.MAX_CURVATURE, k)
 
         radius = abs(1.0/k)
         # trajectory direction at time t_fn
@@ -384,12 +355,12 @@ class Follower(BehaviorBase):
 
 
     def generate_trajectory(self, leader_positions, t):
-        arr = get_interval(self.leader_positions, t, SAMPLE_COUNT)
+        arr = get_interval(self.leader_positions, t, config.SAMPLE_COUNT)
         self.traj_interval = arr
         if len(arr) == 0:
             return None
         known, last_x, last_y, last_t = self.polyfit_trajectory(arr, t)
-        if DISABLE_CIRCLES:
+        if config.DISABLE_CIRCLES:
             return known
         else:
             return self.extend_trajectory(known, last_x, last_y, last_t)
@@ -462,7 +433,7 @@ class Follower(BehaviorBase):
         se = sin(e.theta) / e.theta if e.theta != 0 else 1.0
         omega = omega_ff + k_y * v_ff * se * e.y + k_theta * e.theta
 
-        if DISABLE_FEEDBACK:
+        if config.DISABLE_FEEDBACK:
             v = v_ff
             omega = omega_ff
 
@@ -515,22 +486,26 @@ class Follower(BehaviorBase):
 
 
     def draw(self, screen, field):
-        if DISPLAYED_POINTS_COUNT > 0:
-            k = POSITIONS_BUFFER_SIZE / DISPLAYED_POINTS_COUNT
+        if config.DISPLAYED_POINTS_COUNT > 0:
+            k = config.POSITIONS_BUFFER_SIZE / config.DISPLAYED_POINTS_COUNT
+            if k == 0:
+                k = 1
             for index, (time, point) in enumerate(self.leader_positions):
                 if index % k == 0:
-                    draw_circle(screen, field, TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
+                    draw_circle(screen, field, config.TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
             for index, (time, point) in enumerate(self.noisy_leader_positions):
                 if index % k == 0:
-                    draw_circle(screen, field, NOISY_TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
+                    draw_circle(screen, field, config.NOISY_TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
 
-        if DISPLAYED_USED_POINTS_COUNT > 0:
-            k = len(self.traj_interval) / DISPLAYED_USED_POINTS_COUNT
+        if config.DISPLAYED_USED_POINTS_COUNT > 0:
+            k = len(self.traj_interval) / config.DISPLAYED_USED_POINTS_COUNT
+            if k == 0:
+                k = 1
             for index, (time, point) in enumerate(self.traj_interval):
                 if index % k == 0:
-                    draw_circle(screen, field, USED_TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
+                    draw_circle(screen, field, config.USED_TRAJECTORY_POINTS_COLOR, point, 0.03, 1)
 
-        if DRAW_DELAYED_LEADER_POS:
+        if config.DRAW_DELAYED_LEADER_POS:
             try:
                 orig_leader_dir = Vector(cos(self.orig_leader_theta),
                                          sin(self.orig_leader_theta))
@@ -540,64 +515,64 @@ class Follower(BehaviorBase):
             except AttributeError:
                 pass
 
-        if DRAW_SENSOR_RANGE:
+        if config.DRAW_SENSOR_RANGE:
             ang = atan2(self.real_dir.y, self.real_dir.x)
-            draw_arc(screen, field, SENSOR_COLOR, self.pos, self.visibility_radius,
+            draw_arc(screen, field, config.SENSOR_COLOR, self.pos, self.visibility_radius,
                                     ang - 0.5 * self.visibility_fov,
                                     ang + 0.5 * self.visibility_fov,
                                     1)
-            draw_line(screen, field, SENSOR_COLOR,
+            draw_line(screen, field, config.SENSOR_COLOR,
                       self.pos,
                       self.pos + rotate(self.real_dir * self.visibility_radius,
                                         0.5 * self.visibility_fov),
                       1)
-            draw_line(screen, field, SENSOR_COLOR,
+            draw_line(screen, field, config.SENSOR_COLOR,
                       self.pos,
                       self.pos + rotate(self.real_dir * self.visibility_radius,
                                         -0.5 * self.visibility_fov),
                       1)
 
         try:
-            if DRAW_VISIBILITY and self.leader_is_visible:
-                draw_circle(screen, field, VISIBILITY_COLOR, self.leader.real.pos,
-                            0.5 * BOT_RADIUS)
+            if config.DRAW_VISIBILITY and self.leader_is_visible:
+                draw_circle(screen, field, config.config.VISIBILITY_COLOR, self.leader.real.pos,
+                            0.5 * config.BOT_RADIUS)
         except AttributeError:
             pass
 
         try:
-            if DRAW_REFERENCE_POS:
-                draw_circle(screen, field, TARGET_POINT_COLOR, self.target_point, 0.2)
+            if config.DRAW_REFERENCE_POS:
+                draw_circle(screen, field, config.TARGET_POINT_COLOR, self.target_point, 0.2)
 
-            if DRAW_APPROX_TRAJECTORY and self.trajectory is not None:
+            if config.DRAW_APPROX_TRAJECTORY and self.trajectory is not None:
                 #if len(self.traj_interval) > 1:
                 #    p2 = Point(self.traj_interval[0].pos.x,
                 #               self.traj_interval[0].pos.y)
                 #    for t, p in self.traj_interval:
-                #        draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
+                #        draw_line(screen, field, config.APPROX_TRAJECTORY_COLOR, p, p2)
                 #        p2 = p
 
-                step = (self.t_fn - self.t_st) / TRAJECTORY_SEGMENT_COUNT
-                for t in (self.t_st + k * step for k in xrange(TRAJECTORY_SEGMENT_COUNT)):
+                step = (self.t_fn - self.t_st) / config.TRAJECTORY_SEGMENT_COUNT
+                for t in (self.t_st + k * step for k in xrange(config.TRAJECTORY_SEGMENT_COUNT)):
                     p = Point(self.trajectory.x(t),
                               self.trajectory.y(t))
                     p2 = Point(self.trajectory.x(t + step),
                                self.trajectory.y(t + step))
-                    draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
+                    draw_line(screen, field, config.APPROX_TRAJECTORY_COLOR, p, p2)
 
                 p_st = Point(self.trajectory.x(self.t_st), self.trajectory.y(self.t_st))
                 p_fn = Point(self.trajectory.x(self.t_fn), self.trajectory.y(self.t_fn))
 
-                step = 0.5 / TRAJECTORY_SEGMENT_COUNT
+                step = 0.5 / config.TRAJECTORY_SEGMENT_COUNT
                 p = p_fn
                 p2 = p
                 t = self.t_fn
                 it = 0
-                while it < TRAJECTORY_SEGMENT_COUNT and min(dist(p, p_fn), dist(p, p_st)) < 1.0:
+                while it < config.TRAJECTORY_SEGMENT_COUNT and min(dist(p, p_fn), dist(p, p_st)) < 1.0:
                     it += 1
                     t += step
                     p2 = p
                     p = Point(self.trajectory.x(t), self.trajectory.y(t))
-                    draw_line(screen, field, APPROX_TRAJECTORY_COLOR, p, p2)
+                    draw_line(screen, field, config.APPROX_TRAJECTORY_COLOR, p, p2)
 
         except AttributeError as e: # approximation hasn't been calculated yet
             pass

@@ -1,5 +1,5 @@
-from engine.bot import BOT_VEL_CAP, BOT_ACCEL_CAP, BOT_RADIUS
-from engine.graphics import draw_directed_circle, BOT_COLOR
+from config import config
+from engine.graphics import draw_directed_circle
 from engine.shapes import MockShape, Circle
 from engine.vector import Point, normalize, length
 from math import pi, copysign, sin, cos
@@ -7,9 +7,9 @@ from math import pi, copysign, sin, cos
 class MockModel(object):
     def __init__(self, pos, dir, vel=0.0,
                        pos_fun=None,
-                       max_vel=BOT_VEL_CAP,
-                       max_accel=BOT_ACCEL_CAP,
-                       radius=BOT_RADIUS,
+                       max_vel=config.BOT_VEL_CAP,
+                       max_accel=config.BOT_ACCEL_CAP,
+                       radius=config.BOT_RADIUS,
                        collidable=False):
         self.pos = Point(*pos)
         self.dir = normalize(dir)
@@ -59,6 +59,6 @@ class MockModel(object):
 
 
     def draw(self, screen, field, collided, has_collided_before):
-        draw_directed_circle(screen, field, BOT_COLOR,
+        draw_directed_circle(screen, field, config.BOT_COLOR,
                              self.pos,
-                             self.radius, self.dir, 1 + collided * 4 + has_collided_before)
+                             self.radius, self.dir, 2)# + collided * 4 + has_collided_before)

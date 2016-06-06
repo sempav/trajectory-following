@@ -5,6 +5,7 @@
 import argparse
 import os
 import pygame
+import random
 import sys
 from math import copysign
 
@@ -14,23 +15,10 @@ import models
 from engine.vector import Point, Vector, normalize
 from engine.graphics import Graphics
 from engine.field import Field
-from engine.bot import Bot, BOT_RADIUS, BOT_ACCEL_CAP
+from engine.bot import Bot
 from obstacle_maps import maps
 from mock_trajectories import *
-
-
-FRAMERATE = 60
-FRAMES_PER_BOT_UPDATE = 1
-
-NUM_FOLLOWERS = 5
-
-DEFAULT_START_POS = Point(4.0, 0.0)
-
-MEASUREMENT_SIGMA = 0.05
-MOVEMENT_SIGMA = 0.5 * BOT_ACCEL_CAP / FRAMERATE
-
-MAX_INTERACTIVE_ROT_VEL = 5.0
-
+from config import config
 
 def create_log_file():
     fname = "data"
@@ -45,7 +33,7 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
     log_file = None
     if log_data:
         log_file = create_log_file()
-        log_dict = {"num_bots": 1 + NUM_FOLLOWERS} # counting the leader
+        log_dict = {"num_bots": 1 + config.NUM_FOLLOWERS} # counting the leader
         print >> log_file, log_dict
 
     eng.bots = []
@@ -54,17 +42,17 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
 
     if interactive:
         pos_fun = None
-        start_pos = DEFAULT_START_POS
+        start_pos = config.DEFAULT_START_POS
         start_dir = Vector(0.0, 1.0)
         eng.bots.append(Bot(models.MockModel(pos=start_pos, dir=start_dir, vel=0.0,
                                              pos_fun=pos_fun, collidable=True),
                             behavior=behaviors.Leader(log_file=log_file)))
     else:
         #pos_fun = make_lissajous(17.0, 4, 1.2, 1, 3)
-        #pos_fun = make_lissajous(25.5, 4, 1.8, 1, 3)
+        pos_fun = make_lissajous(25.5, 7, 1.8, 1, 3)
         #pos_fun = make_ellipse()
         #pos_fun = make_lissajous(18.0, 4, 4, 1, 1) # circle
-        pos_fun = make_figure8()
+        #pos_fun = make_figure8()
         eng.bots.append(Bot(models.MockModel(pos=(0.0, 0.0), dir=(1.0, 0.0), vel=0.0, pos_fun=pos_fun, collidable=True),
                             behavior=behaviors.Leader(log_file=log_file)))
         start_pos = eng.bots[0].real.pos_fun(0.0)
@@ -72,20 +60,22 @@ def reset(eng, obstacle_map, model=models.DifferentialModel, interactive=False, 
         eng.bots[0].real.pos = start_pos
         eng.bots[0].real.dir = start_dir
 
-    displacement = -start_dir * 3.1 * BOT_RADIUS
-    for i in xrange(NUM_FOLLOWERS):
+    displacement = -start_dir * 3.1 * config.BOT_RADIUS
+    for i in xrange(config.NUM_FOLLOWERS):
         eng.bots.append(Bot(model(pos=start_pos + (i + 1) * displacement,
                                   dir=start_dir, vel=0.0),
                             behavior=behaviors.Follower(g=30, zeta=0.9,
                                                         leader=eng.bots[i],
-                                                        trajectory_delay=1.0,
-                                                        update_delta_t=0.01,
+                                                        trajectory_delay=config.TRAJECTORY_DELAY,
+                                                        update_delta_t=config.SENSOR_UPDATE_DELAY,
                                                         orig_leader=eng.bots[0],
-                                                        orig_leader_delay=1.0 * (i + 1),
-                                                        noise_sigma=MEASUREMENT_SIGMA,
+                                                        orig_leader_delay= config.TRAJECTORY_DELAY * (i + 1),
+                                                        noise_sigma=config.MEASUREMENT_SIGMA,
                                                         log_file=log_file,
+                                                        visibility_fov=config.FOV_ANGLE,
+                                                        visibility_radius=config.FOV_RADIUS,
                                                         id="%02d" % (i + 1),
-                                                        dt=1.0/FRAMERATE)))
+                                                        dt=1.0/config.SENSOR_UPDATE_DELAY)))
 
     eng.obstacles = maps[obstacle_map][:]
 
@@ -102,9 +92,19 @@ def show_state(movement):
 
 
 def main(args):
+    try:
+        config.read_from_file("config.txt")
+        print("Configuration read from config.txt")
+        args.interactive = args.interactive or config.INTERACTIVE
+    except (OSError, IOError):
+        pass
+
+    random.seed(config.SEED)
+
     print "Starting with parameters:"
-    print "MEASUREMENT_SIGMA =", MEASUREMENT_SIGMA
-    print "MOVEMENT_SIGMA =", MOVEMENT_SIGMA
+    print "config.MEASUREMENT_SIGMA =", config.MEASUREMENT_SIGMA
+    print "config.MOVEMENT_SIGMA =", config.MOVEMENT_SIGMA
+
     # This seems to set initial window position on Windows
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (1,20)
 
@@ -140,8 +140,8 @@ def main(args):
     while not finished:
         eng.field.resize_to_contain(bot.real.pos for bot in eng.bots)
 
-        real_delta_time = 0.001 * clock.tick(FRAMERATE)
-        delta_time = 1.0 / FRAMERATE
+        real_delta_time = 0.001 * clock.tick(config.FRAMERATE)
+        delta_time = 1.0 / config.FRAMERATE
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 finished = True
@@ -185,14 +185,14 @@ def main(args):
         if pygame.K_LEFT in pressed_keys:
             try:
                 max_rot_vel = 2 * (eng.bots[0].real.max_vel - eng.bots[0].real.vel) / (eng.bots[0].real.width * eng.bots[0].real.vel)
-                max_rot_vel = min(max_rot_vel, MAX_INTERACTIVE_ROT_VEL)
+                max_rot_vel = min(max_rot_vel, config.MAX_INTERACTIVE_ROT_VEL)
                 eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, max_rot_vel * delta_time)
             except ZeroDivisionError:
                 pass
         if pygame.K_RIGHT in pressed_keys:
             try:
                 max_rot_vel = 2 * (eng.bots[0].real.max_vel - eng.bots[0].real.vel) / (eng.bots[0].real.width * eng.bots[0].real.vel)
-                max_rot_vel = min(max_rot_vel, MAX_INTERACTIVE_ROT_VEL)
+                max_rot_vel = min(max_rot_vel, config.MAX_INTERACTIVE_ROT_VEL)
                 eng.bots[0].real.dir = engine.vector.rotate(eng.bots[0].real.dir, -max_rot_vel * delta_time)
             except ZeroDivisionError:
                 pass
@@ -208,9 +208,9 @@ def main(args):
         #eng.time = 0.001 * pygame.time.get_ticks() - time_start
 
         iter_counter += 1
-        if iter_counter % FRAMES_PER_BOT_UPDATE == 0:
+        if iter_counter % config.FRAMES_PER_BOT_UPDATE == 0:
             eng.update_bots()
-        eng.update_physics(delta_time, MOVEMENT_SIGMA)
+        eng.update_physics(delta_time, config.MOVEMENT_SIGMA)
 
         collided_set = eng.check_collisions()
 
@@ -219,11 +219,11 @@ def main(args):
                      targets = eng.targets)
 
         text = ("Time: %0.1f" % eng.time) + ("s")#, FPS: %.2f" % (1.0 / real_delta_time))
-        text += u", update Δt = %.3fs" % (FRAMES_PER_BOT_UPDATE * 1.0/FRAMERATE)
+        text += u", update Δt = %.3fs" % (config.FRAMES_PER_BOT_UPDATE * 1.0/config.FRAMERATE)
         if collided_set: # collision is occurring currently
             collision_has_occurred = True
-        if collision_has_occurred:
-            text += ". A collision has been recorded"
+        #if collision_has_occurred:
+        #    text += ". A collision has been recorded"
         ren = font.render(text, 0, (255, 255, 255))
         text_size = font.size(text)
         graph.screen.blit(ren, (30, graph.size[1] - text_size[1]))

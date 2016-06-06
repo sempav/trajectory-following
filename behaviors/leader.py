@@ -1,10 +1,10 @@
 from base import BehaviorBase
-from engine.bot import BOT_RADIUS
+from config import config
 
 class Leader(BehaviorBase):
     def __init__(self, id="leader", log_file=None):
         super(Leader, self).__init__()
-        self.radius = BOT_RADIUS
+        self.radius = config.BOT_RADIUS
         self.id = id
         self.log_file = log_file
         if self.log_file is not None:

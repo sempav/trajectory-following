@@ -1,16 +1,16 @@
 from random import gauss
 from math import pi, copysign
 
-from engine.bot import BOT_VEL_CAP, BOT_ACCEL_CAP, BOT_RADIUS
+from config import config
 from engine.vector import Point, Vector, length, normalize, rotate, signed_angle
-from engine.graphics import draw_circle, draw_line, draw_directed_circle, BOT_COLOR
+from engine.graphics import draw_circle, draw_line, draw_directed_circle
 from engine.shapes import Circle
 
 class DifferentialModel(object):
     def __init__(self, pos, dir, vel = 0.0,
-                       max_vel = BOT_VEL_CAP,
-                       max_accel = BOT_ACCEL_CAP,
-                       radius = BOT_RADIUS):
+                       max_vel = config.BOT_VEL_CAP,
+                       max_accel = config.BOT_ACCEL_CAP,
+                       radius = config.BOT_RADIUS):
         self.pos = Point(*pos)
         self.dir = normalize(dir)
         self.lvel = vel
@@ -50,14 +50,14 @@ class DifferentialModel(object):
         # if they didn't have to accelerate smoothly
         target_lvel = v - 0.5 * self.width * omega
         target_rvel = v + 0.5 * self.width * omega
-        if abs(self.lvel - target_lvel) < delta_time * BOT_ACCEL_CAP:
+        if abs(self.lvel - target_lvel) < delta_time * config.BOT_ACCEL_CAP:
             self.lvel = target_lvel
         else:
-            self.lvel += copysign(BOT_ACCEL_CAP, target_lvel - self.lvel) * delta_time
-        if abs(self.rvel - target_rvel) < delta_time * BOT_ACCEL_CAP:
+            self.lvel += copysign(config.BOT_ACCEL_CAP, target_lvel - self.lvel) * delta_time
+        if abs(self.rvel - target_rvel) < delta_time * config.BOT_ACCEL_CAP:
             self.rvel = target_rvel
         else:
-            self.rvel += copysign(BOT_ACCEL_CAP, target_rvel - self.rvel) * delta_time
+            self.rvel += copysign(config.BOT_ACCEL_CAP, target_rvel - self.rvel) * delta_time
         # cap velocity
         v = max(abs(self.lvel), abs(self.rvel))
         if v > self.max_vel:
@@ -74,6 +74,6 @@ class DifferentialModel(object):
 
 
     def draw(self, screen, field, collided, has_collided_before):
-        draw_directed_circle(screen, field, BOT_COLOR,
+        draw_directed_circle(screen, field, config.BOT_COLOR,
                              self.shape.center, self.shape.radius,
-                             self.dir, 1 + collided * 4 + has_collided_before)
+                             self.dir, 2)# + collided * 4 + has_collided_before)

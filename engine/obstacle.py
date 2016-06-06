@@ -2,8 +2,8 @@ import pygame
 from functools import partial
 from itertools import starmap
 
+from config import Config
 import shapes
-from graphics import OBSTACLE_COLOR
 from vector import Vector, dist, normalize, dot, cross
 
 class Obstacle(object):
@@ -16,7 +16,7 @@ class Obstacle(object):
 
 
     def draw(self, screen, field):
-        self.shape.draw(screen, field, OBSTACLE_COLOR)
+        self.shape.draw(screen, field, config.OBSTACLE_COLOR)
 
 
     def intersect(self, obj):
@@ -43,7 +43,7 @@ def edges(vertices):
 
 def draw_polygon(screen, field, vertices):
     for u,v in edges(vertices):
-        pygame.draw.line(screen, OBSTACLE_COLOR,
+        pygame.draw.line(screen, config.OBSTACLE_COLOR,
                          field.fit_on_screen(u),
                          field.fit_on_screen(v))
 

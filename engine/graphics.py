@@ -1,36 +1,9 @@
+from config import config
+from vector import Point, Vector, signed_angle, rotate
+
 import pygame
 from pygame import gfxdraw
-
-from vector import Point, Vector, signed_angle, rotate
 from math import degrees, pi, sin, cos
-
-GRID_COLOR = 50,50,50
-AXES_COLOR = 90,90,90
-OBSTACLE_COLOR = 200,200,200
-BOT_COLOR = 255,0,0
-TARGET_COLOR = 255,255,0
-SENSOR_COLOR = 50,50,155
-TRAJECTORY_POINTS_COLOR = 155,155,155
-USED_TRAJECTORY_POINTS_COLOR = 155,155,155
-NOISY_TRAJECTORY_POINTS_COLOR = 155,55,55
-APPROX_TRAJECTORY_COLOR = 200,200,0
-TARGET_POINT_COLOR = 200,0,200
-VISIBILITY_COLOR = 0,200,200
-
-TARGET_RADIUS = 5
-
-DRAW_COORD_GRID = True
-DRAW_SENSOR_RANGE = True
-DRAW_SENSOR_RAYS = False
-DRAW_VISIBILITY = True
-DRAW_VELOCITY = True
-DRAW_DIRECTION = False
-DRAW_APPROX_TRAJECTORY = True
-DRAW_REFERENCE_POS = True
-DRAW_DELAYED_LEADER_POS = False
-
-DISPLAYED_POINTS_COUNT = 10
-DISPLAYED_USED_POINTS_COUNT = 0
 
 
 def draw_circle(screen, field, color, center, radius, thickness=2):
@@ -88,19 +61,19 @@ class Graphics(object):
 
     def draw_coordinate_grid(self, num = (10,10)):
         for x in xrange(int(self.field.left), 1 + int(self.field.right), 1):
-            pygame.draw.line(self.screen, GRID_COLOR if x != 0 else AXES_COLOR,
+            pygame.draw.line(self.screen, config.GRID_COLOR if x != 0 else config.AXES_COLOR,
                              self.field.fit_on_screen(Point(x, self.field.bottom)),
                              self.field.fit_on_screen(Point(x, self.field.top)))
         for y in xrange(int(self.field.bottom), 1 + int(self.field.top), 1):
-            pygame.draw.line(self.screen, GRID_COLOR if y != 0 else AXES_COLOR,
+            pygame.draw.line(self.screen, config.GRID_COLOR if y != 0 else config.AXES_COLOR,
                              self.field.fit_on_screen(Point(self.field.left,  y)),
                              self.field.fit_on_screen(Point(self.field.right, y)))
 
 
     def render(self, bots, obstacles = [], targets = []):
-        self.screen.fill((0, 0, 0))
+        self.screen.fill(config.BACKGROUND_COLOR)
 
-        if DRAW_COORD_GRID:
+        if config.DRAW_COORD_GRID:
             self.draw_coordinate_grid()
 
         for obstacle in obstacles:
@@ -110,17 +83,17 @@ class Graphics(object):
             bot.draw(self.screen, self.field)
 
         for target in targets:
-            pygame.draw.circle(self.screen, TARGET_COLOR,
+            pygame.draw.circle(self.screen, config.TARGET_COLOR,
                                self.field.fit_on_screen(target),
-                               TARGET_RADIUS, 1)
+                               config.TARGET_RADIUS, 1)
         
-        if DRAW_VELOCITY:
+        if config.DRAW_VELOCITY:
             for bot in bots:
                 draw_line(self.screen, self.field, (0, 115, 0),
                           bot.real.pos, 
                           bot.real.pos + bot.real.vel * bot.real.dir,
                           1)
-        if DRAW_DIRECTION:
+        if config.DRAW_DIRECTION:
             for bot in bots:
                 draw_line(self.screen, self.field, (115, 115, 0),
                           bot.real.pos,

@@ -1,8 +1,7 @@
+from config import config
 from vector import Vector
 
 EPSILON = 1e-3
-
-FIELD_CENTERED = True
 
 class Field(object):
     '''This class is responsible for conversion between physical and on-screen coords'''
@@ -15,7 +14,7 @@ class Field(object):
         """
         self.size = size
         self.resolution = resolution
-        if FIELD_CENTERED:
+        if config.FIELD_CENTERED:
             self.left = -0.5 * size[0]
             self.bottom = -0.5 * size[1]
             self.right = 0.5 * size[0]
